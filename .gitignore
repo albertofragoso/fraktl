@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.env
+chroma_db/
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+.expo/
+dist/
+.env.local
+
+# OS
+.DS_Store
