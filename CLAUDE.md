@@ -2,6 +2,8 @@
 
 Project documentation for agents and developers.
 
+**Detailed docs:** [Architecture](./docs/architecture.md) | [API Reference](./docs/api-reference.md) | [Style Guide](./docs/style-guide.md) | [RAG Corpus Guide](./docs/rag-corpus-guide.md) | [Deployment](./docs/deployment.md)
+
 ---
 
 ## Description

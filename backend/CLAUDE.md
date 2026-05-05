@@ -1,6 +1,7 @@
 # Backend — CLAUDE.md
 
-> For project-wide context (stack, data flow, architecture decisions) see the root `../CLAUDE.md`.
+> For project-wide context see the root `../CLAUDE.md`.  
+> Detailed docs: [Architecture](../docs/architecture.md) | [API Reference](../docs/api-reference.md) | [Style Guide](../docs/style-guide.md) | [RAG Corpus Guide](../docs/rag-corpus-guide.md) | [Deployment](../docs/deployment.md)
 
 ---
 
