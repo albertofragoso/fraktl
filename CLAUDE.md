@@ -63,12 +63,17 @@ fraktl/
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
+# Seed the RAG corpus (run once after cloning)
+python scripts/seed_rag.py
+
 # Run dev server (from backend/)
 uvicorn app.main:app --reload --port 8000
 
 # Run tests
 pytest tests/ -v
 ```
+
+Note: the RAG seed also runs automatically on backend startup if ChromaDB is empty.
 
 ### Mobile App
 
@@ -82,7 +87,7 @@ npx expo start
 
 ## Environment Variables
 
-Create `backend/.env` (never commit):
+### Backend (`backend/.env`, never commit)
 
 ```
 # OpenAI
@@ -95,6 +100,32 @@ SUPABASE_JWT_SECRET=...
 
 # App
 ENVIRONMENT=development   # development | production
+```
+
+### Mobile App (`app/.env.local`, never commit)
+
+```
+# Supabase
+EXPO_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+
+# API
+EXPO_PUBLIC_API_URL=http://localhost:8000
+```
+
+---
+
+## Data Flow (End-to-End)
+
+```
+Image (camera) 
+  → POST /scan/detect (heuristic validation, no AI)
+    → if valid → GPT-4o Vision (species identification + visual analysis)
+      → ChromaDB RAG retrieval (botanical context + properties)
+        → GPT-4o (biosemiotic narrative generation)
+          → OpenAI TTS (audio synthesis)
+            → Supabase Storage (persist audio + metadata)
+              → response to client (audio URL + text)
 ```
 
 ---
