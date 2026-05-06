@@ -1,0 +1,27 @@
+[
+  {
+    "species": "Quercus robur",
+    "signature": "El roble es arquetipo de resistencia y arraigo. Su crecimiento lento acumula décadas de información ambiental en cada capa de madera. Sus patrones de ramificación siguen proporciones fractales documentadas con exponente de Hausdorff ~1.7.",
+    "fibonacci_note": "La disposición de sus ramas principales sigue ángulos de 137.5° — el ángulo áureo."
+  },
+  {
+    "species": "Pinus sylvestris",
+    "signature": "El pino silvestre exhibe la espiral de Fibonacci más visible del reino vegetal en la disposición de sus piñas. Su resina tiene propiedades antimicrobianas documentadas. Crece en altitudes donde el estrés osmótico genera mayor densidad de información en la madera.",
+    "fibonacci_note": "Sus piñas muestran espirales 8/13 o 13/21, siempre números Fibonacci consecutivos."
+  },
+  {
+    "species": "Fagus sylvatica",
+    "signature": "La haya forma redes micorrizales densas que comparten nutrientes entre individuos. Su corteza lisa refleja luz de forma uniforme, señal de madurez estructural y baja acumulación de estrés. Sus hojas siguen venación pinnada con ramificación dicotómica fractal.",
+    "fibonacci_note": "El ángulo de inserción de sus ramas laterales converge a 144° — 2 × el ángulo áureo."
+  },
+  {
+    "species": "Betula pendula",
+    "signature": "El abedul es pionero ecológico: coloniza espacios vacíos y prepara el suelo para especies tardías. Su corteza blanca refleja hasta el 85% de la luz solar incidente, regulando temperatura. Sus ramas péndulas describen curvas catenarias naturales.",
+    "fibonacci_note": "La disposición de sus yemas laterales sigue filotaxis 1/3 o 2/5."
+  },
+  {
+    "species": "Acer platanoides",
+    "signature": "El arce presenta hojas con simetría bilateral casi perfecta — desviaciones menores al 3%. Sus frutos (sámaras) rotan en caída libre siguiendo geometría helicoidal optimizada para dispersión máxima. Alta densidad de madera indica lento crecimiento y alta acumulación energética.",
+    "fibonacci_note": "Sus semillas pares se separan en ángulos que aproximan la proporción áurea 1:1.618."
+  }
+]
