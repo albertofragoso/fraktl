@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.routers import history
+from app.routers import history, scan
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,6 +16,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Fraktl API", lifespan=lifespan)
 app.include_router(history.router)
+app.include_router(scan.router)
 
 @app.get("/health")
 async def health():
