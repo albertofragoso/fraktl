@@ -40,7 +40,7 @@ backend/
 │   │   └── history.py     # GET /history
 │   ├── services/
 │   │   ├── detector.py    # OpenCV heuristics (brightness, edges, blur)
-│   │   ├── vision.py      # identify_tree() + generate_narrative() via GPT-4o
+│   │   ├── vision.py      # identify_tree() via GPT-4o Vision + generate_narrative() via GPT-4o-mini
 │   │   ├── tts.py         # generate_audio() via OpenAI TTS
 │   │   └── storage.py     # upload_file() to Supabase Storage buckets
 │   ├── rag/

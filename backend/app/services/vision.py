@@ -50,7 +50,7 @@ async def generate_narrative(identification: dict, rag_context: str) -> dict:
     )
     try:
         response = await openai_client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",  # vision not needed here; mini is ~10x cheaper
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
             max_tokens=400,

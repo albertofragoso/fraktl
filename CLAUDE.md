@@ -18,7 +18,7 @@ Fraktl is a mobile app that scans trees with the camera, analyzes the image with
 |---|---|
 | Mobile app | Expo + React Native (TypeScript) |
 | Backend API | Python 3.12, FastAPI, Uvicorn |
-| Vision AI | OpenAI GPT-4o Vision |
+| Vision AI | OpenAI GPT-4o Vision (identificación) + GPT-4o-mini (narrativa) |
 | RAG | LangChain + ChromaDB (local vector store) |
 | TTS | OpenAI TTS API |
 | Auth | Supabase (Google OAuth + JWT) |
@@ -124,7 +124,7 @@ Image (camera)
   → POST /scan/detect (heuristic validation, no AI)
     → if valid → GPT-4o Vision (species identification + visual analysis)
       → ChromaDB RAG retrieval (botanical context + properties)
-        → GPT-4o (biosemiotic narrative generation)
+        → GPT-4o-mini (biosemiotic narrative generation)
           → OpenAI TTS (audio synthesis)
             → Supabase Storage (persist audio + metadata)
               → response to client (audio URL + text)
