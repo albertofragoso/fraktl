@@ -38,8 +38,8 @@ export function groupScansByDate(scans: ScanItem[]): ScanSection[] {
       title = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })
     }
 
-    const existing = map.get(title) ?? []
-    map.set(title, [...existing, scan])
+    if (!map.has(title)) map.set(title, [])
+    map.get(title)!.push(scan)
   }
 
   return Array.from(map.entries()).map(([title, data]) => ({ title, data }))
