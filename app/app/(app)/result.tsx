@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { View, Text, FlatList, Dimensions, StyleSheet, Pressable } from 'react-native'
+import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { AudioPlayer } from '../../components/AudioPlayer'
 import { Colors, Fonts } from '../../constants/theme'
@@ -48,7 +49,7 @@ export default function ResultScreen() {
     ...(ragList.length > 0 ? [{ type: 'rag' as const, sources: ragList }] : []),
   ]
 
-  function handleScroll(e: any) {
+  function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const index = Math.round(e.nativeEvent.contentOffset.y / screenH)
     if (index !== activeChapter) setActiveChapter(index)
   }
