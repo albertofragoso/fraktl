@@ -34,6 +34,7 @@ export default function ResultScreen() {
 
   const symmetry = symmetry_index ? Number(symmetry_index).toFixed(2) : '—'
   const fibonacci = fibonacci_alignment ?? '—'
+  const hasAudio = audio_url != null && audio_url !== 'null' && audio_url.length > 0
 
   return (
     <ScrollView
@@ -76,7 +77,7 @@ export default function ResultScreen() {
         ) : null}
 
         {/* Audio player */}
-        {audio_url ? (
+        {hasAudio ? (
           <View style={styles.audioBlock}>
             <AudioPlayer url={audio_url} />
           </View>

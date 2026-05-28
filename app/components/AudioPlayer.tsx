@@ -3,17 +3,18 @@ import { View, Text, Pressable, StyleSheet, Animated } from 'react-native'
 import { Audio, AVPlaybackStatus } from 'expo-av'
 import { Colors, Fonts } from '../constants/theme'
 
-interface Props { url: string }
+interface Props { url: string | null | undefined }
 
 export function AudioPlayer({ url }: Props) {
   const [sound, setSound] = useState<Audio.Sound | null>(null)
   const [playing, setPlaying] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState(!url || url === 'null')
   const pulseAnim = useRef(new Animated.Value(1)).current
   const loopRef = useRef<Animated.CompositeAnimation | null>(null)
 
   useEffect(() => {
+    if (!url || url === 'null') return
     let s: Audio.Sound | null = null
 
     Audio.Sound.createAsync(
