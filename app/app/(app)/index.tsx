@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { Colors, Fonts } from '../../constants/theme'
+import { FloatingTabBar } from '../../components/FloatingTabBar'
 
 function PulsingDot({ delay = 0 }: { delay?: number }) {
   const scale = useRef(new Animated.Value(1)).current
@@ -85,7 +86,7 @@ export default function HomeScreen() {
         ]}
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
         {/* Main CTA */}
         <View style={styles.ctaSection}>
           <View style={styles.statusRow}>
@@ -147,6 +148,7 @@ export default function HomeScreen() {
           ))}
         </View>
       </ScrollView>
+      <FloatingTabBar />
     </View>
   )
 }
@@ -167,13 +169,13 @@ const styles = StyleSheet.create({
   logoText: {
     fontFamily: Fonts.display,
     fontSize: 22,
-    color: Colors.neon,
+    color: Colors.sistema,
     letterSpacing: 4,
   },
   logoSub: {
     fontFamily: Fonts.body,
     fontSize: 9,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.4,
     letterSpacing: 2,
     marginTop: 2,
@@ -182,19 +184,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: Colors.borderNeon,
+    borderColor: Colors.sistemaBorder,
     borderRadius: 2,
   },
   signOutText: {
     fontFamily: Fonts.body,
     fontSize: 10,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.6,
     letterSpacing: 2,
   },
   headerBorder: {
     height: 1,
-    backgroundColor: Colors.neon,
+    backgroundColor: Colors.sistema,
     opacity: 0.2,
     marginHorizontal: 24,
   },
@@ -217,12 +219,12 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: Colors.neon,
+    backgroundColor: Colors.sistema,
   },
   statusText: {
     fontFamily: Fonts.body,
     fontSize: 9,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.5,
     letterSpacing: 2,
     marginLeft: 4,
@@ -230,7 +232,7 @@ const styles = StyleSheet.create({
   ctaTitle: {
     fontFamily: Fonts.display,
     fontSize: 28,
-    color: Colors.white,
+    color: Colors.texto,
     letterSpacing: 0,
     lineHeight: 36,
     marginBottom: 8,
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
   ctaDesc: {
     fontFamily: Fonts.body,
     fontSize: 11,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.45,
     letterSpacing: 1,
     marginBottom: 32,
@@ -249,8 +251,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 18,
     borderWidth: 1,
-    borderColor: Colors.neon,
-    backgroundColor: Colors.ghost,
+    borderColor: Colors.sistema,
+    backgroundColor: Colors.sistemaDim,
     borderRadius: 2,
     position: 'relative',
     overflow: 'hidden',
@@ -261,13 +263,13 @@ const styles = StyleSheet.create({
   scanBtnGlow: {
     position: 'absolute',
     inset: 0,
-    backgroundColor: Colors.neon,
+    backgroundColor: Colors.sistema,
     opacity: 0.05,
   },
   scanBtnText: {
     fontFamily: Fonts.display,
     fontSize: 14,
-    color: Colors.neon,
+    color: Colors.sistema,
     letterSpacing: 4,
   },
   // Divider
@@ -280,19 +282,19 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: Colors.borderNeon,
+    backgroundColor: Colors.sistemaBorder,
   },
   dividerText: {
     fontFamily: Fonts.body,
     fontSize: 10,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.3,
   },
   // History card
   historyCard: {
     borderWidth: 1,
-    borderColor: Colors.borderCyan,
-    backgroundColor: Colors.ghostCyan,
+    borderColor: Colors.accionBorder,
+    backgroundColor: Colors.accionDim,
     borderRadius: 2,
     padding: 16,
     marginBottom: 24,
@@ -309,19 +311,19 @@ const styles = StyleSheet.create({
   historyCardTitle: {
     fontFamily: Fonts.displayBold,
     fontSize: 11,
-    color: Colors.cyan,
+    color: Colors.suave,
     letterSpacing: 3,
   },
   historyCardArrow: {
     fontFamily: Fonts.body,
     fontSize: 14,
-    color: Colors.cyan,
+    color: Colors.suave,
     opacity: 0.6,
   },
   historyCardDesc: {
     fontFamily: Fonts.body,
     fontSize: 12,
-    color: Colors.white,
+    color: Colors.texto,
     opacity: 0.4,
     letterSpacing: 0.5,
   },
@@ -333,8 +335,8 @@ const styles = StyleSheet.create({
   infoCell: {
     flex: 1,
     borderWidth: 1,
-    borderColor: Colors.borderNeon,
-    backgroundColor: Colors.ghost,
+    borderColor: Colors.sistemaBorder,
+    backgroundColor: Colors.sistemaDim,
     borderRadius: 2,
     padding: 12,
     alignItems: 'center',
@@ -342,14 +344,14 @@ const styles = StyleSheet.create({
   infoCellValue: {
     fontFamily: Fonts.display,
     fontSize: 18,
-    color: Colors.neon,
+    color: Colors.sistema,
     letterSpacing: 1,
     marginBottom: 4,
   },
   infoCellLabel: {
     fontFamily: Fonts.body,
     fontSize: 8,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.4,
     letterSpacing: 2,
   },
