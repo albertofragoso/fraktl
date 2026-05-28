@@ -73,7 +73,7 @@ export default function HomeScreen() {
           <Text style={styles.logoText}>FRAKTL</Text>
           <Text style={styles.logoSub}>// TREE BIOSEMIOTICS</Text>
         </View>
-        <Pressable onPress={handleSignOut} style={styles.signOutBtn}>
+        <Pressable onPress={handleSignOut} style={({ pressed }) => [styles.signOutBtn, pressed && { opacity: 0.5 }]}>
           <Text style={styles.signOutText}>EXIT</Text>
         </Pressable>
       </View>
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   historyCardPressed: {
-    backgroundColor: 'rgba(0,229,229,0.12)',
+    backgroundColor: Colors.accionDim,
   },
   historyCardHeader: {
     flexDirection: 'row',

@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   },
   dataLabel: {
     position: 'absolute',
-    fontFamily: 'Syne_700Bold',
+    fontFamily: Fonts.displayBold,
     fontSize: 7,
     color: Colors.sistema,
     opacity: 0.7,

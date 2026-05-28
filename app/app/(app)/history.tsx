@@ -53,7 +53,7 @@ export default function HistoryScreen() {
       ) : error ? (
         <View style={styles.center}>
           <Text style={styles.errorText}>Error de conexión</Text>
-          <Pressable onPress={load} style={styles.retryBtn}>
+          <Pressable onPress={load} style={({ pressed }) => [styles.retryBtn, pressed && { opacity: 0.65 }]}>
             <Text style={styles.retryText}>Reintentar</Text>
           </Pressable>
         </View>
@@ -121,7 +121,7 @@ function HistoryEntry({ item, onPress }: { item: ScanItem; onPress: () => void }
       </View>
 
       <Pressable
-        style={styles.playBtn}
+        style={({ pressed }) => [styles.playBtn, pressed && { opacity: 0.65 }]}
         onPress={onPress}
         accessibilityLabel={`Reproducir ${item.species}`}
       >

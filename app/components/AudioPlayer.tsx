@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   containerPressed: {
-    backgroundColor: 'rgba(0,229,229,0.12)',
+    backgroundColor: Colors.accionDim,
   },
   waveform: {
     flexDirection: 'row',
