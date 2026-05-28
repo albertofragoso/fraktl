@@ -24,3 +24,13 @@ dist/
 
 # OS
 .DS_Store
+
+# Claude Code local settings (user-specific permissions)
+.claude/settings.local.json
+
+# Claude memory (personal, not project)
+.claude/projects/
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/

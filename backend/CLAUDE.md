@@ -125,3 +125,111 @@ Edit `app/prompts/identify.py` or `app/prompts/narrate.py` to change the tone, l
 - `POST /scan/detect` must **never** call OpenAI — heuristics only (OpenCV). Latency target: <200ms.
 - All generated files (audio, images) go to **Supabase Storage** — FastAPI does not serve static files.
 - ChromaDB is process-local. Do not share state between workers; Railway is configured for single-worker.
+
+---
+
+## Architecture Conventions
+
+> Derived from the architecture review of 2026-05-27. These are enforced going forward — not aspirational.
+
+### One module = one concern
+
+If two functions only share an HTTP client, they do not belong in the same module. Sharing an import is not the same as sharing a responsibility.
+
+| Module | Owns |
+|---|---|
+| `identification.py` | GPT-4o Vision calls, species ID only |
+| `interpretation.py` | GPT-4o-mini + RAG context, narrative generation only |
+| `tts.py` | Audio synthesis only |
+| `storage.py` | File uploads to Supabase Storage only |
+| `db.py` | PostgreSQL reads and writes only |
+
+**Each module initializes its own external client.** Never import a client (`openai_client`, etc.) from another service module. Client initialization is cheap; coupling is not.
+
+```python
+# CORRECT — tts.py owns its client
+from openai import AsyncOpenAI
+_client = AsyncOpenAI(api_key=settings.openai_api_key)
+
+# WRONG — seam leak
+from app.services.identification import openai_client
+```
+
+### Typed results — `StepResult[T]`
+
+Every service function that can fail returns `StepResult[T]` (from `app/types.py`). Never return zero values (`""`, `b""`, `None`) to signal failure — the caller cannot distinguish failure from a valid empty result.
+
+```python
+# CORRECT
+async def generate_audio(text: str) -> StepResult[bytes]:
+    try:
+        return StepResult(value=audio_bytes, error=None)
+    except Exception as e:
+        return StepResult(value=None, error=str(e))
+
+# WRONG
+async def generate_audio(text: str) -> bytes:
+    try: ...
+    except Exception:
+        return b""  # caller can't tell this from real silence
+```
+
+Never swallow exceptions with bare `pass`. If caught, surface via `StepResult.error` or re-raise.
+
+**Zero-value contract:**
+
+| Field | Failure signal |
+|---|---|
+| URL (`str`) | `StepResult(None, reason)` — never `""` |
+| Audio (`bytes`) | `StepResult(None, reason)` — never `b""` |
+| Scan ID (`str`) | `StepResult(None, reason)` — never a UUID for a non-existent record |
+
+### Pipelines, not routers
+
+Any sequence of 3+ service calls lives in a dedicated pipeline module — not inline in a router.
+
+```python
+# CORRECT — router is thin
+@router.post("/scan")
+async def scan(image: UploadFile, user_id: str = Depends(get_current_user)):
+    result = await scan_pipeline.run(await image.read(), user_id)
+    return result.to_response()
+```
+
+**Routers own only:** request parsing, auth injection, response serialization.  
+**Pipelines own:** step ordering, degradation policy, error propagation decisions.
+
+Services report failure via `StepResult`. They never decide what to do about it — that is the pipeline's job.
+
+**Scan pipeline degradation policy:**
+
+| Step failure | Policy |
+|---|---|
+| `identify_tree` fails | Use fallback identification; continue |
+| `get_context` fails | Continue with empty context |
+| `generate_narrative` fails | Use fallback narrative; continue |
+| `generate_audio` fails | `audio_url: null` in response; continue |
+| `upload_file` fails | Corresponding URL is `null`; continue |
+| `save_scan` fails | HTTP 500 — never return a phantom `scan_id` |
+
+### API response contracts
+
+- `audio_url` and `image_url` are `str | null` — `null` means upload failed, never `""`
+- `scan_id` is only present if the DB write succeeded
+- Do not rename response fields without a versioning discussion — the Expo app depends on exact field names
+
+### Testing layering
+
+Test external behavior through module interfaces, not internal implementation. Patching `openai_client.chat.completions.create` directly is testing implementation. Injecting a mock `identification` function into `ScanPipeline` is testing behavior. Prefer the latter.
+
+| Layer | Mock | Assert |
+|---|---|---|
+| Service unit | External SDK client only | `StepResult.ok`, `.value`, `.error` |
+| Pipeline unit | Each service function | Step ordering, degradation per failure mode |
+| Router integration | `scan_pipeline.run` (one seam) | HTTP status, response field presence |
+
+**Every failure mode in the scan pipeline must have a test:**
+- TTS failure → 200, `audio_url: null`
+- Storage failure → 200, `image_url: null`
+- DB failure → 500, no `scan_id`
+- Vision fallback → 200, `species: "Árbol desconocido"`
