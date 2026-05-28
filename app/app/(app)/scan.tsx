@@ -104,7 +104,7 @@ export default function ScanScreen() {
           <Text style={styles.loadingDesc}>Consultando el árbol...</Text>
         </View>
       ) : (
-        <ScanOverlay hint={hint} />
+        <ScanOverlay hint={hint} state={loading ? 'detected' : 'scanning'} />
       )}
 
       {/* Back button */}
