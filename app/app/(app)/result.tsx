@@ -1,246 +1,350 @@
-import { useEffect, useRef } from 'react'
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  Animated,
-} from 'react-native'
+import { useState, useRef } from 'react'
+import { View, Text, FlatList, Dimensions, StyleSheet, Pressable } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { AudioPlayer } from '../../components/AudioPlayer'
 import { Colors, Fonts } from '../../constants/theme'
 
+type Chapter =
+  | { type: 'scan-lock'; species: string }
+  | { type: 'metrics'; symmetry: string; fibonacci: string }
+  | { type: 'narrative'; narrative: string; audioUrl: string | null }
+  | { type: 'rag'; sources: string[] }
+
 export default function ResultScreen() {
   const router = useRouter()
-  const fadeIn = useRef(new Animated.Value(0)).current
-  const slideUp = useRef(new Animated.Value(24)).current
+  const [activeChapter, setActiveChapter] = useState(0)
+  const screenH = useRef(Dimensions?.get?.('window')?.height ?? 844).current
 
-  const { species, symmetry_index, fibonacci_alignment, narrative, audio_url } =
+  const { species, symmetry_index, fibonacci_alignment, narrative, audio_url, rag_sources } =
     useLocalSearchParams<{
       species: string
       symmetry_index: string
       fibonacci_alignment: string
       narrative: string
       audio_url: string
+      rag_sources?: string
     }>()
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeIn, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(slideUp, { toValue: 0, duration: 600, useNativeDriver: true }),
-    ]).start()
-  }, [])
-
-  const symmetry = symmetry_index ? Number(symmetry_index).toFixed(2) : '—'
-  const fibonacci = fibonacci_alignment ?? '—'
   const hasAudio = audio_url != null && audio_url !== 'null' && audio_url.length > 0
+  const ragList = rag_sources
+    ? rag_sources.split(',').map((s) => s.trim()).filter(Boolean)
+    : []
+
+  const chapters: Chapter[] = [
+    {
+      type: 'scan-lock',
+      species: species ?? 'Especie desconocida',
+    },
+    {
+      type: 'metrics',
+      symmetry: symmetry_index ? Number(symmetry_index).toFixed(2) : '—',
+      fibonacci: fibonacci_alignment ?? '—',
+    },
+    {
+      type: 'narrative',
+      narrative: narrative ?? '',
+      audioUrl: hasAudio ? audio_url : null,
+    },
+    ...(ragList.length > 0 ? [{ type: 'rag' as const, sources: ragList }] : []),
+  ]
+
+  function handleScroll(e: any) {
+    const index = Math.round(e.nativeEvent.contentOffset.y / screenH)
+    if (index !== activeChapter) setActiveChapter(index)
+  }
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Animated.View style={{ opacity: fadeIn, transform: [{ translateY: slideUp }] }}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTag}>// ANÁLISIS COMPLETADO</Text>
+    <View style={styles.root}>
+      <FlatList
+        data={chapters}
+        keyExtractor={(_, i) => String(i)}
+        renderItem={({ item }) => renderChapter(item, router, screenH)}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
+        getItemLayout={(_, index) => ({
+          length: screenH,
+          offset: screenH * index,
+          index,
+        })}
+      />
+
+      {/* Spine indicator */}
+      <View style={styles.spine} pointerEvents="none">
+        {chapters.map((_, i) => (
+          <View
+            key={i}
+            style={[styles.spineDot, activeChapter === i && styles.spineDotActive]}
+          />
+        ))}
+      </View>
+    </View>
+  )
+}
+
+function renderChapter(
+  chapter: Chapter,
+  router: ReturnType<typeof useRouter>,
+  screenH: number,
+): JSX.Element {
+  const chapterStyle = { height: screenH }
+
+  switch (chapter.type) {
+    case 'scan-lock':
+      return (
+        <View style={[styles.chapter, styles.chapterScanLock, chapterStyle]}>
+          <View style={styles.scanRingOuter}>
+            <View style={styles.scanRingMiddle}>
+              <View style={styles.scanRingInner} />
+            </View>
+          </View>
+          <Text style={styles.speciesName}>{chapter.species}</Text>
+          <Text style={styles.swipeHint}>↓ desliza</Text>
         </View>
+      )
 
-        {/* Species title */}
-        <View style={styles.speciesBlock}>
-          <Text style={styles.speciesLabel}>ESPECIE IDENTIFICADA</Text>
-          <Text style={styles.speciesName}>{species ?? 'Desconocida'}</Text>
-          <View style={styles.speciesDivider} />
+    case 'metrics':
+      return (
+        <View style={[styles.chapter, { backgroundColor: Colors.surface }, chapterStyle]}>
+          <Text style={styles.chapterLabel}>Análisis estructural</Text>
+          <View style={styles.metricsGrid}>
+            <View style={[styles.metricCell, { borderColor: Colors.sistemaBorder }]}>
+              <Text style={[styles.metricValue, { color: Colors.sistema }]}>{chapter.symmetry}</Text>
+              <Text style={styles.metricKey}>Índice de simetría</Text>
+            </View>
+            <View style={[styles.metricCell, { borderColor: Colors.accionBorder }]}>
+              <Text style={[styles.metricValue, { color: Colors.accion }]}>{chapter.fibonacci}</Text>
+              <Text style={styles.metricKey}>Proporción Fibonacci</Text>
+            </View>
+          </View>
+          <Text style={styles.swipeHint}>↓ desliza</Text>
         </View>
+      )
 
-        {/* Biosemiotic metrics */}
-        <View style={styles.metricsRow}>
-          <View style={styles.metricCell}>
-            <Text style={styles.metricValue}>{symmetry}</Text>
-            <Text style={styles.metricLabel}>SIMETRÍA</Text>
-          </View>
-          <View style={styles.metricSep} />
-          <View style={styles.metricCell}>
-            <Text style={styles.metricValue}>{fibonacci}</Text>
-            <Text style={styles.metricLabel}>FIBONACCI</Text>
-          </View>
-        </View>
-
-        {/* Narrative */}
-        {narrative ? (
-          <View style={styles.narrativeBlock}>
-            <Text style={styles.narrativeTag}>// INTERPRETACIÓN BIOSEMIÓTICA</Text>
-            <Text style={styles.narrativeText}>{narrative}</Text>
-          </View>
-        ) : null}
-
-        {/* Audio player */}
-        {hasAudio ? (
-          <View style={styles.audioBlock}>
-            <AudioPlayer url={audio_url} />
-          </View>
-        ) : null}
-
-        {/* Actions */}
-        <View style={styles.actions}>
+    case 'narrative':
+      return (
+        <View style={[styles.chapter, chapterStyle]}>
+          <Text style={styles.chapterLabel}>Interpretación biosemiótica</Text>
+          <Text style={styles.narrativeText}>{chapter.narrative}</Text>
+          {chapter.audioUrl && (
+            <View style={styles.audioWrap}>
+              <AudioPlayer url={chapter.audioUrl} />
+            </View>
+          )}
           <Pressable
-            style={({ pressed }) => [styles.newScanBtn, pressed && styles.newScanBtnPressed]}
+            style={({ pressed }) => [styles.newScanBtn, pressed && { opacity: 0.75 }]}
             onPress={() => router.replace('/(app)/scan')}
             accessibilityRole="button"
-            accessibilityLabel="Nuevo escaneo"
           >
-            <Text style={styles.newScanText}>NUEVO ESCANEO</Text>
+            <Text style={styles.newScanText}>Nuevo escaneo</Text>
           </Pressable>
+        </View>
+      )
 
+    case 'rag':
+      return (
+        <View style={[styles.chapter, { backgroundColor: Colors.surface }, chapterStyle]}>
+          <Text style={styles.chapterLabel}>Fuentes del corpus</Text>
+          <View style={styles.ragTags}>
+            {chapter.sources.map((src) => (
+              <View key={src} style={styles.ragTag}>
+                <Text style={styles.ragTagText}>{src}</Text>
+              </View>
+            ))}
+          </View>
           <Pressable
             style={({ pressed }) => [styles.homeBtn, pressed && { opacity: 0.6 }]}
             onPress={() => router.replace('/(app)')}
             accessibilityRole="button"
           >
-            <Text style={styles.homeBtnText}>← INICIO</Text>
+            <Text style={styles.homeBtnText}>← Inicio</Text>
           </Pressable>
         </View>
-      </Animated.View>
-    </ScrollView>
-  )
+      )
+  }
 }
 
+const RING = { outer: 160, middle: 120, inner: 80 }
+
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: Colors.void,
-  },
-  content: {
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-    gap: 28,
-  },
+  root: { flex: 1, backgroundColor: Colors.void },
 
-  header: {
-    marginBottom: 4,
-  },
-  headerTag: {
-    fontFamily: Fonts.body,
-    fontSize: 9,
-    color: Colors.neon,
-    opacity: 0.4,
-    letterSpacing: 2,
-  },
-
-  // Species
-  speciesBlock: {
+  // Spine
+  spine: {
+    position: 'absolute',
+    right: 14,
+    top: '50%',
+    transform: [{ translateY: -30 }],
     gap: 6,
+    alignItems: 'center',
   },
-  speciesLabel: {
-    fontFamily: Fonts.body,
-    fontSize: 8,
-    color: Colors.neon,
-    opacity: 0.35,
-    letterSpacing: 3,
+  spineDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,255,136,0.2)',
+  },
+  spineDotActive: {
+    width: 4,
+    height: 12,
+    borderRadius: 2,
+    backgroundColor: Colors.accion,
+  },
+
+  // Chapters — height injected as inline style
+  chapter: {
+    backgroundColor: Colors.void,
+    paddingHorizontal: 28,
+    paddingTop: 80,
+    paddingBottom: 48,
+    justifyContent: 'center',
+    gap: 24,
+  },
+  chapterScanLock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000',
+  },
+  chapterLabel: {
+    fontFamily: Fonts.displayBold,
+    fontSize: 9,
+    color: Colors.sistema,
+    letterSpacing: 0.2,
+    opacity: 0.7,
+    textTransform: 'uppercase',
+  },
+
+  // Scan lock rings
+  scanRingOuter: {
+    width: RING.outer,
+    height: RING.outer,
+    borderRadius: RING.outer / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,136,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 28,
+  },
+  scanRingMiddle: {
+    width: RING.middle,
+    height: RING.middle,
+    borderRadius: RING.middle / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,136,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanRingInner: {
+    width: RING.inner,
+    height: RING.inner,
+    borderRadius: RING.inner / 2,
+    borderWidth: 1.5,
+    borderColor: Colors.sistema,
+    backgroundColor: 'rgba(0,255,136,0.06)',
   },
   speciesName: {
-    fontFamily: Fonts.display,
-    fontSize: 30,
-    color: Colors.white,
-    letterSpacing: 0,
+    fontFamily: Fonts.serifItalic,
+    fontSize: 28,
+    color: Colors.sistema,
+    textAlign: 'center',
     lineHeight: 36,
   },
-  speciesDivider: {
-    height: 1,
-    backgroundColor: Colors.borderNeon,
-    marginTop: 10,
+  swipeHint: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 11,
+    color: Colors.texto,
+    opacity: 0.3,
+    textAlign: 'center',
+    marginTop: 8,
   },
 
-  // Metrics
-  metricsRow: {
+  // Metrics grid
+  metricsGrid: {
     flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: Colors.borderNeon,
-    backgroundColor: Colors.ghost,
+    gap: 12,
   },
   metricCell: {
     flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
     padding: 16,
-    alignItems: 'center',
-    gap: 4,
-  },
-  metricSep: {
-    width: 1,
-    backgroundColor: Colors.borderNeon,
+    backgroundColor: Colors.void,
+    gap: 6,
   },
   metricValue: {
     fontFamily: Fonts.display,
-    fontSize: 24,
-    color: Colors.neon,
-    letterSpacing: 1,
+    fontSize: 28,
+    letterSpacing: 0,
   },
-  metricLabel: {
-    fontFamily: Fonts.body,
-    fontSize: 8,
-    color: Colors.neon,
-    opacity: 0.4,
-    letterSpacing: 3,
+  metricKey: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 10,
+    color: Colors.texto,
+    opacity: 0.5,
   },
 
   // Narrative
-  narrativeBlock: {
-    gap: 10,
-  },
-  narrativeTag: {
-    fontFamily: Fonts.body,
-    fontSize: 9,
-    color: Colors.cyan,
-    opacity: 0.5,
-    letterSpacing: 2,
-  },
   narrativeText: {
-    fontFamily: Fonts.body,
-    fontSize: 14,
-    color: Colors.white,
-    opacity: 0.75,
-    lineHeight: 24,
-    letterSpacing: 0.3,
+    fontFamily: Fonts.serifItalic,
+    fontSize: 16,
+    color: Colors.texto,
+    lineHeight: 28,
+    opacity: 0.9,
+    borderLeftWidth: 2,
+    borderLeftColor: Colors.accionBorder,
+    paddingLeft: 14,
   },
-
-  // Audio
-  audioBlock: {
-    // wrapper gives spacing context
-  },
-
-  // Actions
-  actions: {
-    gap: 12,
-    marginTop: 8,
+  audioWrap: {
+    marginTop: 4,
   },
   newScanBtn: {
-    width: '100%',
-    alignItems: 'center',
-    paddingVertical: 16,
     borderWidth: 1,
-    borderColor: Colors.neon,
-    backgroundColor: Colors.ghost,
-  },
-  newScanBtnPressed: {
-    backgroundColor: 'rgba(0,255,136,0.18)',
+    borderColor: Colors.sistemaBorder,
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
   },
   newScanText: {
-    fontFamily: Fonts.display,
-    fontSize: 13,
-    color: Colors.neon,
-    letterSpacing: 4,
+    fontFamily: Fonts.displayBold,
+    fontSize: 12,
+    color: Colors.sistema,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+
+  // RAG sources
+  ragTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  ragTag: {
+    backgroundColor: Colors.void,
+    borderWidth: 1,
+    borderColor: Colors.sistemaBorder,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  ragTagText: {
+    fontFamily: Fonts.displayBold,
+    fontSize: 9,
+    color: Colors.sistema,
+    opacity: 0.7,
+    letterSpacing: 0.1,
+    textTransform: 'uppercase',
   },
   homeBtn: {
-    alignItems: 'center',
-    paddingVertical: 8,
+    alignSelf: 'center',
+    paddingVertical: 10,
   },
   homeBtnText: {
     fontFamily: Fonts.body,
-    fontSize: 10,
-    color: Colors.neon,
-    opacity: 0.35,
-    letterSpacing: 2,
+    fontSize: 11,
+    color: Colors.texto,
+    opacity: 0.4,
+    letterSpacing: 1,
   },
 })
