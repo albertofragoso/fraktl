@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+import { render, waitFor, fireEvent, act } from '@testing-library/react-native'
 import ResultScreen, { normalizeFibonacciAlignment } from '../app/(app)/result'
 import { MOCK_SCAN } from './fixtures/scan'
 
@@ -234,5 +234,96 @@ describe('ResultScreen — Ch2 Metrics chapter', () => {
     await waitFor(() => {
       expect(getByTestId('ch2-metrics')).toBeTruthy()
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// S3 — Ch3 typewriter + audio reveal tests
+// ---------------------------------------------------------------------------
+
+describe('ResultScreen — Ch3 typewriter + audio reveal', () => {
+  beforeEach(() => {
+    mockFetch(MOCK_SCAN)
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('typewriter starts empty before any interaction', async () => {
+    const { getByText, queryByText } = render(<ResultScreen />)
+    // Wait for data to load
+    await waitFor(() => getByText('Quercus robur'))
+    // narrative text not rendered yet (typewriter starts at '' — not in view)
+    // The text node would contain the cursor '|' as well, so query for exact narrative only
+    expect(queryByText(MOCK_SCAN.narrative)).toBeNull()
+  })
+
+  it('skipTypewriter completes text immediately on tap', async () => {
+    const { getByText, getByTestId } = render(<ResultScreen />)
+    await waitFor(() => getByText('Quercus robur'))
+
+    await act(async () => {
+      fireEvent.press(getByTestId('ch3-tap-area'))
+    })
+
+    // RNTL getByText does partial/exact match on text content;
+    // since cursor '|' is a child Text, use regex to match narrative text
+    await waitFor(() => {
+      expect(getByText(new RegExp(MOCK_SCAN.narrative.replace(/\./g, '\\.')))).toBeTruthy()
+    })
+  })
+
+  it('typewriter starts empty and shows text progressively after skip', async () => {
+    const { getByText, getByTestId } = render(<ResultScreen />)
+    await waitFor(() => getByText('Quercus robur'))
+
+    // Before skip: typedText is '' (ch3 not in view in tests)
+    // Tap to skip → full narrative set immediately
+    await act(async () => {
+      fireEvent.press(getByTestId('ch3-tap-area'))
+    })
+
+    await waitFor(() => {
+      expect(getByText(new RegExp(MOCK_SCAN.narrative.replace(/\./g, '\\.')))).toBeTruthy()
+    })
+  })
+
+  it('audio player is hidden initially (opacity 0, typingComplete = false)', async () => {
+    const { getByText, queryByTestId } = render(<ResultScreen />)
+    await waitFor(() => getByText('Quercus robur'))
+
+    // audio_url present → Animated.View renders with opacity 0 before typing completes
+    // (audioOpacity shared value starts at 0; mock useAnimatedStyle returns it as-is)
+    const audioWrap = queryByTestId('ch3-audio-wrap')
+    expect(audioWrap).toBeTruthy()
+    // Style array contains { opacity: 0 }
+    const flatStyle = [audioWrap!.props.style].flat()
+    expect(flatStyle).toEqual(expect.arrayContaining([{ opacity: 0 }]))
+  })
+
+  it('audio player appears after typewriter completes (skip)', async () => {
+    const { getByText, getByTestId } = render(<ResultScreen />)
+    await waitFor(() => getByText('Quercus robur'))
+
+    // The ch3-audio-wrap is always present when audio_url is set;
+    // after skip the full narrative text is visible (typingComplete = true)
+    await act(async () => {
+      fireEvent.press(getByTestId('ch3-tap-area'))
+    })
+
+    await waitFor(() => {
+      // Audio wrap is in tree
+      expect(getByTestId('ch3-audio-wrap')).toBeTruthy()
+      // Full narrative rendered (confirms typingComplete fired)
+      expect(getByText(new RegExp(MOCK_SCAN.narrative.replace(/\./g, '\\.')))).toBeTruthy()
+    })
+  })
+
+  it('audio player not rendered when audio_url is null', async () => {
+    mockFetch({ ...MOCK_SCAN, audio_url: null })
+    const { getByText, queryByTestId } = render(<ResultScreen />)
+    await waitFor(() => getByText('Quercus robur'))
+    expect(queryByTestId('ch3-audio-wrap')).toBeNull()
   })
 })

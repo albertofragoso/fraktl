@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  TouchableWithoutFeedback,
 } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -17,6 +18,10 @@ import Animated, {
   interpolate,
   clamp,
   runOnJS,
+  withTiming,
+  withRepeat,
+  withSequence,
+  cancelAnimation,
 } from 'react-native-reanimated'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { AudioPlayer } from '../../components/AudioPlayer'
@@ -187,6 +192,131 @@ function TraitRow({ label, value }: { label: string; value: string }) {
       <Text style={styles.traitLabel}>{label}</Text>
       <Text style={styles.traitValue}>{value}</Text>
     </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Ch3 — Narrative chapter with typewriter reveal
+// ---------------------------------------------------------------------------
+
+function Ch3Narrative({
+  narrative,
+  audioUrl,
+  screenH,
+  scrollY,
+}: {
+  narrative: string
+  audioUrl: string | null
+  screenH: number
+  scrollY: ReturnType<typeof useSharedValue<number>>
+}) {
+  const [typedText, setTypedText] = useState('')
+  const [typingComplete, setTypingComplete] = useState(false)
+  const audioOpacity = useSharedValue(0)
+  const cursorOpacity = useSharedValue(1)
+  const ch3HasTriggered = useRef(false)
+  const typewriterInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const onTypingComplete = useCallback(() => {
+    setTypingComplete(true)
+    audioOpacity.value = withTiming(1, { duration: 300 })
+  }, [audioOpacity])
+
+  const ch3Progress = useDerivedValue(
+    () => clamp((scrollY.value - screenH * 2) / (screenH * 0.6), 0, 1),
+    [screenH]
+  )
+
+  function startTypewriter() {
+    if (ch3HasTriggered.current) return
+    ch3HasTriggered.current = true
+
+    // Cursor blink
+    cursorOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 400 }),
+        withTiming(1, { duration: 400 })
+      ),
+      -1,
+      false
+    )
+
+    let i = 0
+    typewriterInterval.current = setInterval(() => {
+      i++
+      setTypedText(narrative.slice(0, i))
+      if (i >= narrative.length) {
+        clearInterval(typewriterInterval.current!)
+        typewriterInterval.current = null
+        onTypingComplete()
+        cancelAnimation(cursorOpacity)
+        cursorOpacity.value = withTiming(0, { duration: 200 })
+      }
+    }, 22)
+  }
+
+  function skipTypewriter() {
+    if (typingComplete) return
+    if (typewriterInterval.current) {
+      clearInterval(typewriterInterval.current)
+      typewriterInterval.current = null
+    }
+    setTypedText(narrative)
+    onTypingComplete()
+    cancelAnimation(cursorOpacity)
+    cursorOpacity.value = withTiming(0, { duration: 200 })
+  }
+
+  useAnimatedReaction(
+    () => ch3Progress.value > 0.8,
+    (isReady, wasReady) => {
+      if (isReady && !wasReady && !ch3HasTriggered.current) {
+        runOnJS(startTypewriter)()
+      }
+    }
+  )
+
+  useEffect(() => {
+    return () => {
+      if (typewriterInterval.current) clearInterval(typewriterInterval.current)
+    }
+  }, [])
+
+  const cursorStyle = useAnimatedStyle(() => ({
+    opacity: cursorOpacity.value,
+  }))
+
+  const audioPlayerStyle = useAnimatedStyle(() => ({
+    opacity: audioOpacity.value,
+  }))
+
+  return (
+    <TouchableWithoutFeedback onPress={skipTypewriter} testID="ch3-tap-area">
+      <View
+        style={[styles.chapter, styles.chapterNarrative, { height: screenH }]}
+        testID="ch3-narrative"
+      >
+        <Text style={styles.chapterLabel}>INTERPRETACIÓN</Text>
+
+        <View style={styles.narrativeBlock}>
+          <Text style={styles.narrativeText}>
+            {typedText}
+            <Animated.Text style={[styles.cursor, cursorStyle]}>|</Animated.Text>
+          </Text>
+        </View>
+
+        {audioUrl && (
+          <Animated.View
+            style={[styles.audioWrap, audioPlayerStyle]}
+            testID="ch3-audio-wrap"
+          >
+            <AudioPlayer url={audioUrl} />
+          </Animated.View>
+        )}
+
+        <FloatingTabBar />
+      </View>
+    </TouchableWithoutFeedback>
   )
 }
 
@@ -407,16 +537,13 @@ function renderChapter(
 
     case 'narrative':
       return (
-        <View style={[styles.chapter, chapterStyle]}>
-          <Text style={styles.chapterLabel}>Interpretación biosemiótica</Text>
-          <Text style={styles.narrativeText}>{chapter.narrative}</Text>
-          {chapter.audioUrl && (
-            <View style={styles.audioWrap}>
-              <AudioPlayer url={chapter.audioUrl} />
-            </View>
-          )}
-          <FloatingTabBar />
-        </View>
+        <Ch3Narrative
+          key="ch3-narrative"
+          narrative={chapter.narrative}
+          audioUrl={chapter.audioUrl}
+          screenH={screenH}
+          scrollY={scrollY}
+        />
       )
 
     case 'rag':
@@ -730,16 +857,29 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 
-  // Narrative
+  // Ch3 — Narrative
+  chapterNarrative: {
+    justifyContent: 'flex-start',
+    paddingTop: 80,
+  },
+  narrativeBlock: {
+    borderLeftWidth: 2,
+    borderLeftColor: Colors.accionBorder,
+    paddingLeft: 14,
+    flex: 1,
+  },
   narrativeText: {
-    fontFamily: Fonts.serifItalic,
+    fontFamily: Fonts.serif,
     fontSize: 16,
     color: Colors.texto,
     lineHeight: 28,
     opacity: 0.9,
-    borderLeftWidth: 2,
-    borderLeftColor: Colors.accionBorder,
-    paddingLeft: 14,
+  },
+  cursor: {
+    fontFamily: Fonts.serif,
+    fontSize: 16,
+    color: Colors.sistema,
+    lineHeight: 28,
   },
   audioWrap: {
     marginTop: 4,
