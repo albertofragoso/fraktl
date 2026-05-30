@@ -243,10 +243,13 @@ describe('ResultScreen — Ch2 Metrics chapter', () => {
 
 describe('ResultScreen — Ch3 typewriter + audio reveal', () => {
   beforeEach(() => {
+    jest.useFakeTimers()
     mockFetch(MOCK_SCAN)
   })
 
   afterEach(() => {
+    jest.useRealTimers()
+    jest.clearAllTimers()
     jest.clearAllMocks()
   })
 
@@ -325,5 +328,25 @@ describe('ResultScreen — Ch3 typewriter + audio reveal', () => {
     const { getByText, queryByTestId } = render(<ResultScreen />)
     await waitFor(() => getByText('Quercus robur'))
     expect(queryByTestId('ch3-audio-wrap')).toBeNull()
+  })
+
+  it('typewriter reveals characters progressively via setInterval', async () => {
+    // The reanimated mock fires useAnimatedReaction with (true, false) when the getter
+    // returns a boolean — simulating ch3Progress > 0.8 (ch3 scrolled into view).
+    // This triggers startTypewriter(), which sets a 22 ms setInterval.
+    const { getByText, getByTestId } = render(<ResultScreen />)
+
+    // Wait for data to load
+    await waitFor(() => expect(getByText('Quercus robur')).toBeTruthy())
+
+    // startTypewriter interval is now registered. Advance all ticks → full narrative typed.
+    // Each character takes 22 ms; narrative is 18 chars → 18 * 22 ms covers all ticks.
+    // Wrap in act() so React flushes state updates from the setInterval callbacks.
+    await act(async () => { jest.advanceTimersByTime(MOCK_SCAN.narrative.length * 22 + 22) })
+
+    await waitFor(() => {
+      expect(getByText(new RegExp(MOCK_SCAN.narrative.replace(/\./g, '\\.')))).toBeTruthy()
+      expect(getByTestId('ch3-audio-wrap')).toBeTruthy()
+    })
   })
 })

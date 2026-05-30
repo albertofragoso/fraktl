@@ -41,8 +41,12 @@ function useAnimatedReaction(getter, reaction) {
     } catch {
       val = 0
     }
+    // If the getter returns a boolean (e.g. ch3Progress.value > 0.8), simulate
+    // the value transitioning from false→true so startTypewriter fires in tests.
+    const fireVal = typeof val === 'boolean' ? true : val
+    const firePrev = typeof val === 'boolean' ? false : undefined
     try {
-      reaction(val)
+      reaction(fireVal, firePrev)
     } catch {
       // noop
     }
