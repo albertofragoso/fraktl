@@ -444,6 +444,31 @@ export default function ResultScreen() {
       setLoading(false)
       return
     }
+    // Dev bypass: resolve dev-* IDs from local fixtures without hitting the API
+    if (__DEV__ && String(scan_id).startsWith('dev-')) {
+      import('../../dev/fixtures').then(({ DEV_SCANS }) => {
+        const found = DEV_SCANS.find((s) => s.id === scan_id)
+        if (found) {
+          setScanData({
+            id: found.id,
+            species: found.species,
+            symmetry_index: found.symmetry_index,
+            fibonacci_alignment: found.fibonacci_alignment,
+            narrative: found.narrative,
+            audio_url: found.audio_url || null,
+            image_url: found.image_url || null,
+            age_estimate: (found as any).age_estimate ?? '~80 años',
+            bark_type: (found as any).bark_type ?? 'rugosa',
+            branching_pattern: (found as any).branching_pattern ?? 'alterna',
+            confidence: (found as any).confidence ?? 0.88,
+            scanned_at: found.scanned_at,
+            rag_sources: (found as any).rag_sources,
+          })
+        }
+        setLoading(false)
+      })
+      return
+    }
     async function fetchScan() {
       try {
         const {

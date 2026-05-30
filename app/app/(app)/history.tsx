@@ -8,6 +8,7 @@ import { API_URL } from '../../constants/api'
 import { Colors, Fonts } from '../../constants/theme'
 import { groupScansByDate, ScanItem, ScanSection } from '../../utils/groupScansByDate'
 import { FloatingTabBar } from '../../components/FloatingTabBar'
+import { DEV_SCANS } from '../../dev/fixtures'
 
 export default function HistoryScreen() {
   const router = useRouter()
@@ -18,6 +19,11 @@ export default function HistoryScreen() {
   useEffect(() => { load() }, [])
 
   async function load() {
+    if (__DEV__) {
+      setSections(groupScansByDate(DEV_SCANS))
+      setLoading(false)
+      return
+    }
     try {
       setError(false)
       setLoading(true)
@@ -70,13 +76,7 @@ export default function HistoryScreen() {
             <HistoryEntry item={item} onPress={() =>
               router.push({
                 pathname: '/(app)/result',
-                params: {
-                  species: item.species,
-                  symmetry_index: String(item.symmetry_index),
-                  fibonacci_alignment: item.fibonacci_alignment,
-                  narrative: item.narrative,
-                  audio_url: item.audio_url,
-                },
+                params: { scan_id: item.id },
               })
             } />
           )}
