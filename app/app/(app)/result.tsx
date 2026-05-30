@@ -215,9 +215,11 @@ function Ch3Narrative({
   const audioOpacity = useSharedValue(0)
   const cursorOpacity = useSharedValue(1)
   const ch3HasTriggered = useRef(false)
+  const completedRef = useRef(false)
   const typewriterInterval = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const onTypingComplete = useCallback(() => {
+    completedRef.current = true
     setTypingComplete(true)
     audioOpacity.value = withTiming(1, { duration: 300 })
   }, [audioOpacity])
@@ -256,7 +258,7 @@ function Ch3Narrative({
   }
 
   function skipTypewriter() {
-    if (typingComplete) return
+    if (completedRef.current) return  // synchronous ref, never stale
     if (typewriterInterval.current) {
       clearInterval(typewriterInterval.current)
       typewriterInterval.current = null

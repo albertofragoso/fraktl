@@ -334,16 +334,29 @@ describe('ResultScreen — Ch3 typewriter + audio reveal', () => {
     // The reanimated mock fires useAnimatedReaction with (true, false) when the getter
     // returns a boolean — simulating ch3Progress > 0.8 (ch3 scrolled into view).
     // This triggers startTypewriter(), which sets a 22 ms setInterval.
-    const { getByText, getByTestId } = render(<ResultScreen />)
+    const { getByText, getByTestId, queryByTestId } = render(<ResultScreen />)
 
     // Wait for data to load
     await waitFor(() => expect(getByText('Quercus robur')).toBeTruthy())
 
-    // startTypewriter interval is now registered. Advance all ticks → full narrative typed.
-    // Each character takes 22 ms; narrative is 18 chars → 18 * 22 ms covers all ticks.
-    // Wrap in act() so React flushes state updates from the setInterval callbacks.
-    await act(async () => { jest.advanceTimersByTime(MOCK_SCAN.narrative.length * 22 + 22) })
+    // Advance 3 ticks (3 characters at 22ms each) — partial reveal
+    act(() => { jest.advanceTimersByTime(3 * 22) })
 
+    // After 3 ticks: first 3 chars visible, full narrative NOT complete yet,
+    // audio wrapper still hidden (typingComplete = false)
+    const partial = MOCK_SCAN.narrative.slice(0, 3) // 'El '
+    await waitFor(() => expect(getByText(new RegExp(partial))).toBeTruthy())
+    // audio-wrap is in the tree but opacity is still 0 (typing not complete)
+    const audioWrapMid = queryByTestId('ch3-audio-wrap')
+    if (audioWrapMid) {
+      const flatStyle = [audioWrapMid.props.style].flat()
+      expect(flatStyle).toEqual(expect.arrayContaining([{ opacity: 0 }]))
+    }
+
+    // Now advance to full completion
+    act(() => { jest.runAllTimers() })
+
+    // Full text + audio visible
     await waitFor(() => {
       expect(getByText(new RegExp(MOCK_SCAN.narrative.replace(/\./g, '\\.')))).toBeTruthy()
       expect(getByTestId('ch3-audio-wrap')).toBeTruthy()

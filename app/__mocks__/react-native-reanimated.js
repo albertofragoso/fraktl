@@ -41,6 +41,9 @@ function useAnimatedReaction(getter, reaction) {
     } catch {
       val = 0
     }
+    // NOTE: when getter returns boolean, mock auto-fires reaction(true, false) on mount.
+    // This simulates scroll-progress conditions (e.g. ch3Progress > 0.8) entering view.
+    // All boolean-returning useAnimatedReaction getters will auto-trigger in tests.
     // If the getter returns a boolean (e.g. ch3Progress.value > 0.8), simulate
     // the value transitioning from false→true so startTypewriter fires in tests.
     const fireVal = typeof val === 'boolean' ? true : val
