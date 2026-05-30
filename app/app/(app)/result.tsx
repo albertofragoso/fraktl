@@ -37,6 +37,7 @@ type ScanData = {
   branching_pattern: string
   confidence: number
   scanned_at: string
+  // rag_sources not returned by GET /scan/{id} yet — deferred to S5
   rag_sources?: string[]
 }
 
@@ -78,7 +79,8 @@ function Ch2Metrics({
 }) {
   // --- Derived progress (0→1 as Ch2 scrolls into view) ---
   const ch2Progress = useDerivedValue(() =>
-    clamp((scrollY.value - screenH) / (screenH * 0.6), 0, 1)
+    clamp((scrollY.value - screenH) / (screenH * 0.6), 0, 1),
+    [screenH]
   )
 
   // --- NaN-safe symmetry number ---
@@ -89,13 +91,13 @@ function Ch2Metrics({
 
   // --- Animated symmetry display value ---
   const displayedSymmetry = useDerivedValue(() =>
-    interpolate(ch2Progress.value, [0, 1], [0, symmetryNum])
+    interpolate(ch2Progress.value, [0, 1], [0, symmetryNum]),
+    [symmetryNum]
   )
 
   // Use runOnJS to push display value to RN state
-  const [symmetryDisplay, setSymmetryDisplay] = useState(
-    symmetryNum.toFixed(2)
-  )
+  // Init to '0.00' — useAnimatedReaction drives from 0 on mount, avoids one-frame flash
+  const [symmetryDisplay, setSymmetryDisplay] = useState('0.00')
   useAnimatedReaction(
     () => displayedSymmetry.value,
     (val) => runOnJS(setSymmetryDisplay)(val.toFixed(2)),
@@ -108,7 +110,8 @@ function Ch2Metrics({
     [scanData]
   )
   const fibFill = useDerivedValue(() =>
-    interpolate(ch2Progress.value, [0, 1], [0, FIB_WIDTHS[fibNorm]])
+    interpolate(ch2Progress.value, [0, 1], [0, FIB_WIDTHS[fibNorm]]),
+    [fibNorm]
   )
   const fibBarStyle = useAnimatedStyle(() => ({
     width: `${fibFill.value * 100}%`,
@@ -116,7 +119,8 @@ function Ch2Metrics({
 
   // --- Confidence bar ---
   const confFill = useDerivedValue(() =>
-    interpolate(ch2Progress.value, [0, 1], [0, scanData?.confidence ?? 0])
+    interpolate(ch2Progress.value, [0, 1], [0, scanData?.confidence ?? 0]),
+    [scanData?.confidence]
   )
   const confBarStyle = useAnimatedStyle(() => ({
     width: `${confFill.value * 100}%`,

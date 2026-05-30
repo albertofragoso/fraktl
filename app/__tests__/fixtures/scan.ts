@@ -11,7 +11,7 @@ export type ScanData = {
   branching_pattern: string
   confidence: number
   scanned_at: string
-  rag_sources?: string[]
+  // rag_sources not returned by GET /scan/{id} yet — deferred to S5
 }
 
 export const MOCK_SCAN: ScanData = {
@@ -27,5 +27,4 @@ export const MOCK_SCAN: ScanData = {
   branching_pattern: 'dicotómica',
   confidence: 0.94,
   scanned_at: '2026-05-29T12:00:00Z',
-  rag_sources: [],
 }
