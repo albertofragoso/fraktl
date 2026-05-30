@@ -482,10 +482,10 @@ export default function ResultScreen() {
       <View style={styles.loadingContainer}>
         <Text style={styles.errorText}>No se pudo cargar el escaneo.</Text>
         <Pressable
-          onPress={() => router.replace('/(app)')}
+          onPress={() => router.back()}
           style={styles.backLink}
         >
-          <Text style={styles.backLinkText}>← Inicio</Text>
+          <Text style={styles.backLinkText}>Volver</Text>
         </Pressable>
       </View>
     )
