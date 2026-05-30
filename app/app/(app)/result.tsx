@@ -1,6 +1,23 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, FlatList, Dimensions, StyleSheet, Pressable, Image, ActivityIndicator } from 'react-native'
-import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
+import {
+  View,
+  Text,
+  Dimensions,
+  StyleSheet,
+  Pressable,
+  Image,
+  ActivityIndicator,
+} from 'react-native'
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+  useDerivedValue,
+  useAnimatedStyle,
+  useAnimatedReaction,
+  interpolate,
+  clamp,
+  runOnJS,
+} from 'react-native-reanimated'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { AudioPlayer } from '../../components/AudioPlayer'
 import { FloatingTabBar } from '../../components/FloatingTabBar'
@@ -25,9 +42,153 @@ type ScanData = {
 
 type Chapter =
   | { type: 'scan-lock'; scanData: ScanData }
-  | { type: 'metrics'; symmetry: string; fibonacci: string }
+  | { type: 'metrics'; scanData: ScanData }
   | { type: 'narrative'; narrative: string; audioUrl: string | null }
   | { type: 'rag'; sources: string[] }
+
+// ---------------------------------------------------------------------------
+// Utility
+// ---------------------------------------------------------------------------
+
+export function normalizeFibonacciAlignment(raw: string): 'alta' | 'media' | 'baja' {
+  const normalized = raw.toLowerCase().trim()
+  if (['alta', 'high', 'alto', 'muy alta'].includes(normalized)) return 'alta'
+  if (['baja', 'low', 'bajo', 'muy baja'].includes(normalized)) return 'baja'
+  return 'media'
+}
+
+const FIB_WIDTHS: Record<'alta' | 'media' | 'baja', number> = {
+  alta: 0.85,
+  media: 0.5,
+  baja: 0.2,
+}
+
+// ---------------------------------------------------------------------------
+// Ch2 — Metrics Chapter (animated)
+// ---------------------------------------------------------------------------
+
+function Ch2Metrics({
+  scanData,
+  screenH,
+  scrollY,
+}: {
+  scanData: ScanData
+  screenH: number
+  scrollY: ReturnType<typeof useSharedValue<number>>
+}) {
+  // --- Derived progress (0→1 as Ch2 scrolls into view) ---
+  const ch2Progress = useDerivedValue(() =>
+    clamp((scrollY.value - screenH) / (screenH * 0.6), 0, 1)
+  )
+
+  // --- NaN-safe symmetry number ---
+  const symmetryNum = useMemo(() => {
+    const parsed = parseFloat(String(scanData?.symmetry_index ?? '0'))
+    return isNaN(parsed) ? 0 : Math.min(Math.max(parsed, 0), 1)
+  }, [scanData])
+
+  // --- Animated symmetry display value ---
+  const displayedSymmetry = useDerivedValue(() =>
+    interpolate(ch2Progress.value, [0, 1], [0, symmetryNum])
+  )
+
+  // Use runOnJS to push display value to RN state
+  const [symmetryDisplay, setSymmetryDisplay] = useState(
+    symmetryNum.toFixed(2)
+  )
+  useAnimatedReaction(
+    () => displayedSymmetry.value,
+    (val) => runOnJS(setSymmetryDisplay)(val.toFixed(2)),
+    [displayedSymmetry]
+  )
+
+  // --- Fibonacci bar ---
+  const fibNorm = useMemo(
+    () => normalizeFibonacciAlignment(scanData?.fibonacci_alignment ?? 'media'),
+    [scanData]
+  )
+  const fibFill = useDerivedValue(() =>
+    interpolate(ch2Progress.value, [0, 1], [0, FIB_WIDTHS[fibNorm]])
+  )
+  const fibBarStyle = useAnimatedStyle(() => ({
+    width: `${fibFill.value * 100}%`,
+  }))
+
+  // --- Confidence bar ---
+  const confFill = useDerivedValue(() =>
+    interpolate(ch2Progress.value, [0, 1], [0, scanData?.confidence ?? 0])
+  )
+  const confBarStyle = useAnimatedStyle(() => ({
+    width: `${confFill.value * 100}%`,
+  }))
+
+  return (
+    <View
+      style={[styles.chapter, styles.chapterMetrics, { height: screenH }]}
+      testID="ch2-metrics"
+    >
+      {/* Chapter label */}
+      <Text style={styles.chapterLabel}>ANÁLISIS ESTRUCTURAL</Text>
+
+      {/* Top section: ring + bar stats */}
+      <View style={styles.metricsTop}>
+        {/* Symmetry ring */}
+        <View style={styles.symRingOuter} testID="symmetry-ring">
+          <View style={styles.symRingInner}>
+            <Text style={styles.symValue}>{symmetryDisplay}</Text>
+            <Text style={styles.symLabel}>SIMETRÍA</Text>
+          </View>
+        </View>
+
+        {/* Bar stats */}
+        <View style={styles.barStats}>
+          {/* Fibonacci bar */}
+          <View style={styles.barRow}>
+            <Text style={styles.barLabel}>Fibonacci</Text>
+            <Text style={styles.barTag}>{fibNorm}</Text>
+          </View>
+          <View style={styles.barTrack} testID="fibonacci-bar-track">
+            <Animated.View style={[styles.barFillSistema, fibBarStyle]} />
+          </View>
+
+          {/* Confidence bar */}
+          <View style={[styles.barRow, { marginTop: 16 }]}>
+            <Text style={styles.barLabel}>Confianza</Text>
+            <Text style={styles.barTag}>
+              {Math.round((scanData?.confidence ?? 0) * 100)}%
+            </Text>
+          </View>
+          <View style={styles.barTrack} testID="confidence-bar-track">
+            <Animated.View style={[styles.barFillAccion, confBarStyle]} />
+          </View>
+        </View>
+      </View>
+
+      {/* Trait list */}
+      <View style={styles.traitList}>
+        <TraitRow label="Edad estimada" value={scanData?.age_estimate ?? '—'} />
+        <TraitRow label="Corteza" value={scanData?.bark_type ?? '—'} />
+        <TraitRow label="Ramificación" value={scanData?.branching_pattern ?? '—'} />
+      </View>
+
+      <Text style={styles.swipeHint}>↓ desliza</Text>
+      <FloatingTabBar />
+    </View>
+  )
+}
+
+function TraitRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.traitRow}>
+      <Text style={styles.traitLabel}>{label}</Text>
+      <Text style={styles.traitValue}>{value}</Text>
+    </View>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Root screen
+// ---------------------------------------------------------------------------
 
 export default function ResultScreen() {
   const router = useRouter()
@@ -38,6 +199,12 @@ export default function ResultScreen() {
 
   const { scan_id } = useLocalSearchParams<{ scan_id: string }>()
 
+  // Shared value for scroll-driven animations
+  const scrollY = useSharedValue(0)
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y
+  })
+
   useEffect(() => {
     if (!scan_id) {
       setLoading(false)
@@ -45,7 +212,9 @@ export default function ResultScreen() {
     }
     async function fetchScan() {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
         const res = await fetch(
           `${process.env.EXPO_PUBLIC_API_URL}/scan/${scan_id}`,
           { headers: { Authorization: `Bearer ${session?.access_token}` } }
@@ -65,7 +234,11 @@ export default function ResultScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator testID="activity-indicator" size="large" color={Colors.sistema} />
+        <ActivityIndicator
+          testID="activity-indicator"
+          size="large"
+          color={Colors.sistema}
+        />
       </View>
     )
   }
@@ -74,46 +247,54 @@ export default function ResultScreen() {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.errorText}>No se pudo cargar el escaneo.</Text>
-        <Pressable onPress={() => router.replace('/(app)')} style={styles.backLink}>
+        <Pressable
+          onPress={() => router.replace('/(app)')}
+          style={styles.backLink}
+        >
           <Text style={styles.backLinkText}>← Inicio</Text>
         </Pressable>
       </View>
     )
   }
 
-  // rag_sources not yet persisted server-side — Ch4 deferred to S5
   const ragList: string[] = scanData?.rag_sources ?? []
 
   const chapters: Chapter[] = [
     { type: 'scan-lock', scanData },
-    {
-      type: 'metrics',
-      symmetry: scanData.symmetry_index != null ? Number(scanData.symmetry_index).toFixed(2) : '—',
-      fibonacci: scanData.fibonacci_alignment ?? '—',
-    },
+    { type: 'metrics', scanData },
     {
       type: 'narrative',
       narrative: scanData.narrative ?? '',
       audioUrl: scanData.audio_url ?? null,
     },
-    ...(ragList.length > 0 ? [{ type: 'rag' as const, sources: ragList }] : []),
+    ...(ragList.length > 0
+      ? [{ type: 'rag' as const, sources: ragList }]
+      : []),
   ]
 
-  function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    const index = Math.round(e.nativeEvent.contentOffset.y / screenH)
+  function handleChapterChange(index: number) {
     if (index !== activeChapter) setActiveChapter(index)
   }
 
   return (
     <View style={styles.root}>
-      <FlatList
+      <Animated.FlatList
         data={chapters}
         keyExtractor={(_, i) => String(i)}
-        renderItem={({ item }) => renderChapter(item, router, screenH)}
+        renderItem={({ item, index }) =>
+          renderChapter(
+            item,
+            router,
+            screenH,
+            scrollY,
+            index,
+            handleChapterChange
+          )
+        }
         pagingEnabled
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        onScroll={handleScroll}
+        onScroll={scrollHandler}
         getItemLayout={(_, index) => ({
           length: screenH,
           offset: screenH * index,
@@ -126,7 +307,10 @@ export default function ResultScreen() {
         {chapters.map((_, i) => (
           <View
             key={i}
-            style={[styles.spineDot, activeChapter === i && styles.spineDotActive]}
+            style={[
+              styles.spineDot,
+              activeChapter === i && styles.spineDotActive,
+            ]}
           />
         ))}
       </View>
@@ -134,10 +318,17 @@ export default function ResultScreen() {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Chapter renderer
+// ---------------------------------------------------------------------------
+
 function renderChapter(
   chapter: Chapter,
   router: ReturnType<typeof useRouter>,
   screenH: number,
+  scrollY: ReturnType<typeof useSharedValue<number>>,
+  _index: number,
+  _onChapterChange: (i: number) => void
 ): React.ReactElement {
   const chapterStyle = { height: screenH }
 
@@ -152,7 +343,9 @@ function renderChapter(
       ].filter(Boolean)
 
       return (
-        <View style={[styles.chapter, styles.chapterScanLock, chapterStyle]}>
+        <View
+          style={[styles.chapter, styles.chapterScanLock, chapterStyle]}
+        >
           {/* Confidence badge */}
           <View style={styles.confidenceBadge}>
             <Text style={styles.confidenceText}>{confidencePct}%</Text>
@@ -177,7 +370,9 @@ function renderChapter(
           </View>
 
           {/* Species name */}
-          <Text style={styles.speciesName}>{scanData.species ?? 'Especie desconocida'}</Text>
+          <Text style={styles.speciesName}>
+            {scanData.species ?? 'Especie desconocida'}
+          </Text>
 
           {/* Trait badges */}
           {badgeItems.length > 0 && (
@@ -198,21 +393,12 @@ function renderChapter(
 
     case 'metrics':
       return (
-        <View style={[styles.chapter, { backgroundColor: Colors.surface }, chapterStyle]}>
-          <Text style={styles.chapterLabel}>Análisis estructural</Text>
-          <View style={styles.metricsGrid}>
-            <View style={[styles.metricCell, { borderColor: Colors.sistemaBorder }]}>
-              <Text style={[styles.metricValue, { color: Colors.sistema }]}>{chapter.symmetry}</Text>
-              <Text style={styles.metricKey}>Índice de simetría</Text>
-            </View>
-            <View style={[styles.metricCell, { borderColor: Colors.accionBorder }]}>
-              <Text style={[styles.metricValue, { color: Colors.accion }]}>{chapter.fibonacci}</Text>
-              <Text style={styles.metricKey}>Proporción Fibonacci</Text>
-            </View>
-          </View>
-          <Text style={styles.swipeHint}>↓ desliza</Text>
-          <FloatingTabBar />
-        </View>
+        <Ch2Metrics
+          key="ch2-metrics"
+          scanData={chapter.scanData}
+          screenH={screenH}
+          scrollY={scrollY}
+        />
       )
 
     case 'narrative':
@@ -231,7 +417,13 @@ function renderChapter(
 
     case 'rag':
       return (
-        <View style={[styles.chapter, { backgroundColor: Colors.surface }, chapterStyle]}>
+        <View
+          style={[
+            styles.chapter,
+            { backgroundColor: Colors.surface },
+            chapterStyle,
+          ]}
+        >
           <Text style={styles.chapterLabel}>Fuentes del corpus</Text>
           <View style={styles.ragTags}>
             {chapter.sources.map((src) => (
@@ -253,7 +445,12 @@ function renderChapter(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 const RING = { outer: 200, middle: 156, inner: 112 }
+const SYM_RING = { outer: 100, inner: 80 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.void },
@@ -315,6 +512,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#000',
     paddingBottom: 120,
+  },
+  chapterMetrics: {
+    backgroundColor: Colors.surface,
+    gap: 24,
   },
   chapterLabel: {
     fontFamily: Fonts.displayBold,
@@ -383,7 +584,7 @@ const styles = StyleSheet.create({
     lineHeight: 34,
   },
 
-  // Trait badges row
+  // Trait badges row (Ch1)
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -414,29 +615,115 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Metrics grid
-  metricsGrid: {
+  // Ch2 — metrics top section (ring + bars side-by-side)
+  metricsTop: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    gap: 20,
   },
-  metricCell: {
-    flex: 1,
+
+  // Symmetry ring
+  symRingOuter: {
+    width: SYM_RING.outer,
+    height: SYM_RING.outer,
+    borderRadius: SYM_RING.outer / 2,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 16,
-    backgroundColor: Colors.void,
-    gap: 6,
+    borderColor: Colors.sistemaBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  metricValue: {
+  symRingInner: {
+    width: SYM_RING.inner,
+    height: SYM_RING.inner,
+    borderRadius: SYM_RING.inner / 2,
+    borderWidth: 1.5,
+    borderColor: Colors.sistema,
+    backgroundColor: 'rgba(0,255,136,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  symValue: {
     fontFamily: Fonts.display,
-    fontSize: 28,
+    fontSize: 18,
+    color: Colors.sistema,
     letterSpacing: 0,
   },
-  metricKey: {
+  symLabel: {
+    fontFamily: Fonts.displayBold,
+    fontSize: 7,
+    color: Colors.sistema,
+    opacity: 0.6,
+    letterSpacing: 0.4,
+  },
+
+  // Bar stats (right side)
+  barStats: {
+    flex: 1,
+  },
+  barRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 6,
+  },
+  barLabel: {
     fontFamily: Fonts.bodyLight,
-    fontSize: 10,
+    fontSize: 11,
+    color: Colors.texto,
+    opacity: 0.6,
+  },
+  barTag: {
+    fontFamily: Fonts.displayBold,
+    fontSize: 9,
+    color: Colors.sistema,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  barTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(245,234,208,0.08)',
+    overflow: 'hidden',
+  },
+  barFillSistema: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: Colors.sistema,
+  },
+  barFillAccion: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: Colors.accion,
+  },
+
+  // Trait list (Ch2 bottom rows)
+  traitList: {
+    gap: 0,
+    borderTopWidth: 1,
+    borderTopColor: Colors.sistemaBorder,
+    paddingTop: 16,
+  },
+  traitRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(245,234,208,0.06)',
+  },
+  traitLabel: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 12,
     color: Colors.texto,
     opacity: 0.5,
+  },
+  traitValue: {
+    fontFamily: Fonts.body,
+    fontSize: 12,
+    color: Colors.texto,
+    opacity: 0.9,
   },
 
   // Narrative

@@ -14,9 +14,10 @@ module.exports = {
     './jest.setup.js',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(expo-secure-store|expo-constants|@expo|@expo-google-fonts|expo|react-native|@react-native|@testing-library|expo-router)/)',
+    'node_modules/(?!(expo-secure-store|expo-constants|@expo|@expo-google-fonts|expo|react-native|@react-native|@testing-library|expo-router|react-native-reanimated)/)',
   ],
   moduleNameMapper: {
     '^@expo-google-fonts/(.*)$': '<rootDir>/__mocks__/expo-google-fonts.js',
+    '^react-native-reanimated$': '<rootDir>/__mocks__/react-native-reanimated.js',
   },
 }
