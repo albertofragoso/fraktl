@@ -207,8 +207,8 @@ async def test_db_failure_raises_503():
     with pytest.raises(HTTPException) as exc_info:
         await pipeline.run(b"image-bytes", "user-123")
 
-    assert exc_info.value.status_code == 503
-    assert exc_info.value.headers["Retry-After"] == "30"
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Scan save failed"
 
 
 # --- Vision fallback ---

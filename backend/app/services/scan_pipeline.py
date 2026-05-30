@@ -147,7 +147,7 @@ class ScanPipeline:
         if image_upload.ok:
             image_url = image_upload.value
 
-        # Step 6: save_scan — 503 on failure (not 500)
+        # Step 6: save_scan — HTTPException(500) propagates from db.py directly
         try:
             save_result: StepResult[str] = self._save_scan(user_id, {
                 "species": identification["species"],
@@ -161,15 +161,16 @@ class ScanPipeline:
                 "bark_type": identification.get("bark_type", "—"),
                 "branching_pattern": identification.get("branching_pattern", "—"),
             })
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error("save_scan step raised", extra={"step": "save_scan", "error": str(e)})
             save_result = StepResult(value=None, error="internal_error")
 
         if not save_result.ok:
             raise HTTPException(
-                status_code=503,
-                detail="Database temporarily unavailable",
-                headers={"Retry-After": "30"},
+                status_code=500,
+                detail="Scan save failed",
             )
 
         return ScanResult(

@@ -1,5 +1,6 @@
 import uuid
 import logging
+from fastapi import HTTPException
 from supabase import create_client
 from app.config import settings
 
@@ -26,7 +27,7 @@ def save_scan(user_id: str, data: dict) -> str:
         _get_client().table("scans").insert({"id": scan_id, "user_id": user_id, **data}).execute()
     except Exception as e:
         logger.error("save_scan failed: %s", e, exc_info=True)
-        raise
+        raise HTTPException(status_code=500, detail="Scan save failed")
     return scan_id
 
 def fetch_history(user_id: str) -> list[dict]:

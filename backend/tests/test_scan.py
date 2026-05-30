@@ -108,7 +108,7 @@ async def test_scan_endpoint_returns_full_result(client, bright_frame_bytes):
 
 
 @pytest.mark.asyncio
-async def test_scan_endpoint_503_on_db_failure(client, bright_frame_bytes):
+async def test_scan_endpoint_500_on_db_failure(client, bright_frame_bytes):
     from fastapi import HTTPException
 
     with (
@@ -117,9 +117,8 @@ async def test_scan_endpoint_503_on_db_failure(client, bright_frame_bytes):
     ):
         mock_settings.supabase_jwt_secret = "test-secret"
         mock_run.side_effect = HTTPException(
-            status_code=503,
-            detail="Database temporarily unavailable",
-            headers={"Retry-After": "30"},
+            status_code=500,
+            detail="Scan save failed",
         )
 
         from tests.conftest import make_token
@@ -130,8 +129,8 @@ async def test_scan_endpoint_503_on_db_failure(client, bright_frame_bytes):
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert response.status_code == 503
-    assert response.headers.get("retry-after") == "30"
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Scan save failed"
 
 
 @pytest.mark.asyncio
