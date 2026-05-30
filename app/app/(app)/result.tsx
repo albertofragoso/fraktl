@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   TouchableWithoutFeedback,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -44,7 +45,7 @@ type ScanData = {
   branching_pattern: string
   confidence: number
   scanned_at: string
-  // rag_sources not returned by GET /scan/{id} yet — deferred to S5
+  // rag_sources not persisted in scans table yet (no DB column) — treated as optional
   rag_sources?: string[]
 }
 
@@ -381,10 +382,12 @@ function Ch3Narrative({
 
 export default function ResultScreen() {
   const router = useRouter()
+  const { bottom } = useSafeAreaInsets()
   const [scanData, setScanData] = useState<ScanData | null>(null)
   const [loading, setLoading] = useState(true)
   const screenH = useRef(Dimensions?.get?.('window')?.height ?? 844).current
   const isReducedMotion = useReducedMotion()
+  const tabBarPadding = 60 + bottom  // FloatingTabBar pill (~52px) + margin + safe area
 
   const { scan_id } = useLocalSearchParams<{ scan_id: string }>()
 
@@ -498,9 +501,7 @@ export default function ResultScreen() {
       narrative: scanData.narrative ?? '',
       audioUrl: scanData.audio_url ?? null,
     },
-    ...(ragList.length > 0
-      ? [{ type: 'rag' as const, sources: ragList }]
-      : []),
+    { type: 'rag', sources: ragList },
   ]
 
   return (
@@ -535,6 +536,7 @@ export default function ResultScreen() {
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={scrollHandler}
+        contentContainerStyle={{ paddingBottom: tabBarPadding }}
         getItemLayout={(_, index) => ({
           length: screenH,
           offset: screenH * index,
@@ -653,27 +655,28 @@ function renderChapter(
     case 'rag':
       return (
         <View
+          testID="ch4-rag"
           style={[
             styles.chapter,
             { backgroundColor: Colors.surface },
             chapterStyle,
           ]}
         >
-          <Text style={styles.chapterLabel}>Fuentes del corpus</Text>
-          <View style={styles.ragTags}>
-            {chapter.sources.map((src) => (
-              <View key={src} style={styles.ragTag}>
-                <Text style={styles.ragTagText}>{src}</Text>
-              </View>
-            ))}
-          </View>
-          <Pressable
-            style={({ pressed }) => [styles.homeBtn, pressed && { opacity: 0.6 }]}
-            onPress={() => router.replace('/(app)')}
-            accessibilityRole="button"
-          >
-            <Text style={styles.homeBtnText}>← Inicio</Text>
-          </Pressable>
+          <Text style={styles.chapterLabel}>FUENTES DEL CORPUS</Text>
+          {chapter.sources.length > 0 ? (
+            <View style={styles.ragList} testID="ch4-rag-list">
+              {chapter.sources.map((src, i) => (
+                <View key={src} style={styles.ragRow}>
+                  <Text style={styles.ragNum}>{String(i + 1).padStart(2, '0')}</Text>
+                  <Text style={styles.ragSrc}>{src}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.emptyRag} testID="ch4-empty-state">
+              No hay fuentes disponibles
+            </Text>
+          )}
           <FloatingTabBar />
         </View>
       )
@@ -994,37 +997,38 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // RAG sources
-  ragTags: {
+  // RAG sources — Ch4 numbered list
+  ragList: {
+    flex: 1,
+    gap: 12,
+    marginTop: 16,
+  },
+  ragRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
+    alignItems: 'flex-start',
   },
-  ragTag: {
-    backgroundColor: Colors.void,
-    borderWidth: 1,
-    borderColor: Colors.sistemaBorder,
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  ragTagText: {
-    fontFamily: Fonts.displayBold,
-    fontSize: 9,
-    color: Colors.sistema,
-    opacity: 0.7,
-    letterSpacing: 0.1,
-    textTransform: 'uppercase',
-  },
-  homeBtn: {
-    alignSelf: 'center',
-    paddingVertical: 10,
-  },
-  homeBtnText: {
-    fontFamily: Fonts.body,
+  ragNum: {
+    fontFamily: Fonts.display,
     fontSize: 11,
+    color: Colors.sistema,
+    opacity: 0.5,
+    minWidth: 24,
+  },
+  ragSrc: {
+    fontFamily: Fonts.body,
+    fontSize: 13,
+    color: Colors.texto,
+    opacity: 0.8,
+    flex: 1,
+    lineHeight: 18,
+  },
+  emptyRag: {
+    fontFamily: Fonts.body,
+    fontSize: 13,
     color: Colors.texto,
     opacity: 0.4,
-    letterSpacing: 1,
+    fontStyle: 'italic',
+    marginTop: 16,
   },
 })
