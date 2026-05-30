@@ -513,6 +513,7 @@ export default function ResultScreen() {
       />
 
       <Animated.FlatList
+        testID="result-flatlist"
         data={chapters}
         keyExtractor={(_, i) => String(i)}
         renderItem={({ item, index }) => (
@@ -666,7 +667,7 @@ function renderChapter(
           {chapter.sources.length > 0 ? (
             <View style={styles.ragList} testID="ch4-rag-list">
               {chapter.sources.map((src, i) => (
-                <View key={src} style={styles.ragRow}>
+                <View key={`${i}-${src}`} style={styles.ragRow}>
                   <Text style={styles.ragNum}>{String(i + 1).padStart(2, '0')}</Text>
                   <Text style={styles.ragSrc}>{src}</Text>
                 </View>

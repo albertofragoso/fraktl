@@ -482,15 +482,15 @@ describe('S5 — Ch4 RAG sources', () => {
 
   it('FlatList has contentContainerStyle with paddingBottom', async () => {
     mockFetch(MOCK_SCAN)
-    const { getByText, UNSAFE_getAllByType } = render(<ResultScreen />)
+    const { getByText, getByTestId } = render(<ResultScreen />)
     await waitFor(() => getByText('Quercus robur'))
 
     // useSafeAreaInsets mock returns bottom=34 → tabBarPadding = 60+34 = 94
-    const Animated = require('react-native-reanimated').default
-    // Check via UNSAFE_getAllByType or via testID on FlatList
-    // Alternatively validate the math: 60 + 34 = 94
-    const expectedPadding = 60 + 34
-    expect(expectedPadding).toBe(94)
+    const flatList = getByTestId('result-flatlist')
+    expect(flatList.props.contentContainerStyle).toEqual(
+      expect.objectContaining({ paddingBottom: expect.any(Number) })
+    )
+    expect(flatList.props.contentContainerStyle.paddingBottom).toBeGreaterThan(0)
   })
 
   it('Ch4 renders FUENTES DEL CORPUS label', async () => {
