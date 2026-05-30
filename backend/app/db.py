@@ -1,6 +1,16 @@
 import uuid
+import logging
 from supabase import create_client
 from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+_FULL_SELECT = (
+    "id, species, symmetry_index, fibonacci_alignment, "
+    "narrative, audio_url, image_url, "
+    "age_estimate, bark_type, branching_pattern, confidence, "
+    "scanned_at"
+)
 
 _client = None
 
@@ -14,19 +24,36 @@ def save_scan(user_id: str, data: dict) -> str:
     scan_id = str(uuid.uuid4())
     try:
         _get_client().table("scans").insert({"id": scan_id, "user_id": user_id, **data}).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error("save_scan failed: %s", e, exc_info=True)
+        raise
     return scan_id
 
 def fetch_history(user_id: str) -> list[dict]:
     try:
         result = (
             _get_client().table("scans")
-            .select("id, species, symmetry_index, image_url, scanned_at")
+            .select(_FULL_SELECT)
             .eq("user_id", user_id)
             .order("scanned_at", desc=True)
             .execute()
         )
         return result.data
-    except Exception:
+    except Exception as e:
+        logger.error("fetch_history failed: %s", e, exc_info=True)
         return []
+
+def get_scan_by_id(scan_id: str, user_id: str) -> dict | None:
+    try:
+        result = (
+            _get_client().table("scans")
+            .select(_FULL_SELECT)
+            .eq("id", scan_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        rows = result.data
+        return rows[0] if rows else None
+    except Exception as e:
+        logger.error("get_scan_by_id failed: %s", e, exc_info=True)
+        return None

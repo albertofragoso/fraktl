@@ -34,6 +34,10 @@ class ScanResult:
     audio_url: str | None
     image_url: str | None
     audio_status: Literal["ok", "failed"]
+    confidence: float
+    age_estimate: str
+    bark_type: str
+    branching_pattern: str
 
     def to_response(self) -> dict:
         return {
@@ -45,6 +49,10 @@ class ScanResult:
             "audio_url": self.audio_url,
             "image_url": self.image_url,
             "audio_status": self.audio_status,
+            "confidence": self.confidence,
+            "age_estimate": self.age_estimate,
+            "bark_type": self.bark_type,
+            "branching_pattern": self.branching_pattern,
         }
 
 
@@ -148,6 +156,10 @@ class ScanPipeline:
                 "narrative": narrative_data["narrative"],
                 "audio_url": audio_url,
                 "image_url": image_url,
+                "confidence": identification.get("confidence", 0.0),
+                "age_estimate": identification.get("age_estimate", "—"),
+                "bark_type": identification.get("bark_type", "—"),
+                "branching_pattern": identification.get("branching_pattern", "—"),
             })
         except Exception as e:
             logger.error("save_scan step raised", extra={"step": "save_scan", "error": str(e)})
@@ -169,6 +181,10 @@ class ScanPipeline:
             audio_url=audio_url,
             image_url=image_url,
             audio_status=audio_status,
+            confidence=identification.get("confidence", 0.0),
+            age_estimate=identification.get("age_estimate", "—"),
+            bark_type=identification.get("bark_type", "—"),
+            branching_pattern=identification.get("branching_pattern", "—"),
         )
 
     # --- Default real implementations (used in production) ---

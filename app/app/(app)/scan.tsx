@@ -49,7 +49,7 @@ export default function ScanScreen() {
 
       if (!res.ok) throw new Error('scan failed')
       const result = await res.json()
-      router.push({ pathname: '/(app)/result', params: result })
+      router.push({ pathname: '/(app)/result', params: { scan_id: result.scan_id } })
     } catch {
       Alert.alert('Error', 'No se pudo analizar el árbol. Intenta de nuevo.')
       setLoading(false)
@@ -76,7 +76,7 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.permissionScreen}>
-        <Text style={styles.permissionTitle}>ACCESO A CÁMARA</Text>
+        <Text style={styles.permissionTitle}>Acceso a cámara</Text>
         <Text style={styles.permissionDesc}>
           Fraktl necesita la cámara para escanear el árbol.
         </Text>
@@ -137,11 +137,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   permissionTitle: {
-    fontFamily: Fonts.display,
-    fontSize: 18,
-    color: Colors.sistema,
-    letterSpacing: 4,
+    fontFamily: Fonts.serifBold,
+    fontSize: 22,
+    color: Colors.texto,
+    letterSpacing: 0,
     marginBottom: 4,
+    textAlign: 'center',
   },
   permissionDesc: {
     fontFamily: Fonts.body,

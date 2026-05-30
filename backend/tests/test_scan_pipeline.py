@@ -71,6 +71,10 @@ def test_scan_result_to_response_has_all_fields():
         audio_url="https://storage.example.com/audio.mp3",
         image_url="https://storage.example.com/image.jpg",
         audio_status="ok",
+        confidence=0.88,
+        age_estimate="80-120 años",
+        bark_type="profundamente fisurada gris",
+        branching_pattern="irregular ascendente robusto",
     )
 
     response = result.to_response()
@@ -83,6 +87,10 @@ def test_scan_result_to_response_has_all_fields():
     assert response["audio_url"] == "https://storage.example.com/audio.mp3"
     assert response["image_url"] == "https://storage.example.com/image.jpg"
     assert response["audio_status"] == "ok"
+    assert response["confidence"] == 0.88
+    assert response["age_estimate"] == "80-120 años"
+    assert response["bark_type"] == "profundamente fisurada gris"
+    assert response["branching_pattern"] == "irregular ascendente robusto"
 
 
 # --- TTS failure ---
