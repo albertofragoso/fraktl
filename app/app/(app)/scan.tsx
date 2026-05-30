@@ -49,7 +49,7 @@ export default function ScanScreen() {
 
       if (!res.ok) throw new Error('scan failed')
       const result = await res.json()
-      router.push({ pathname: '/(app)/result', params: result })
+      router.push({ pathname: '/(app)/result', params: { scan_id: result.scan_id } })
     } catch {
       Alert.alert('Error', 'No se pudo analizar el árbol. Intenta de nuevo.')
       setLoading(false)

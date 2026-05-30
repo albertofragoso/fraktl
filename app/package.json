@@ -9,22 +9,35 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo-google-fonts/bebas-neue": "^0.4.1",
+    "@expo-google-fonts/big-shoulders-display": "^0.2.3",
+    "@expo-google-fonts/fraunces": "^0.4.1",
+    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
+    "@expo-google-fonts/outfit": "^0.4.3",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo-google-fonts/syne": "^0.4.2",
+    "@expo/metro-runtime": "~6.1.2",
     "@supabase/supabase-js": "^2.105.3",
     "expo": "~54.0.33",
     "expo-auth-session": "~7.0.11",
     "expo-av": "~16.0.8",
     "expo-camera": "~17.0.10",
     "expo-font": "^55.0.7",
+    "expo-linear-gradient": "^56.0.4",
     "expo-router": "~6.0.23",
     "expo-secure-store": "~15.0.8",
     "expo-splash-screen": "^55.0.20",
     "expo-status-bar": "~3.0.9",
     "expo-web-browser": "~15.0.11",
     "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "^4.16.0",
+    "react-native-web": "^0.21.0",
+    "react-native-worklets": "^0.8.0"
   },
   "devDependencies": {
     "@testing-library/react-native": "^13.3.3",
@@ -36,5 +49,8 @@
     "react-test-renderer": "^19.1.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "jest-mock": "^30.0.0"
+  }
 }

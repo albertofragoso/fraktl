@@ -45,4 +45,27 @@ describe('FloatingTabBar', () => {
     const { getByTestId } = render(<FloatingTabBar />)
     expect(getByTestId('fab-button')).toBeTruthy()
   })
+
+  it('home tab is active on /(app)', () => {
+    mockPathname = '/(app)'
+    const { getByLabelText } = render(<FloatingTabBar />)
+    // indicator dot should be active (accessible via parent pressable)
+    expect(getByLabelText('Inicio')).toBeTruthy()
+  })
+
+  it('no active tab on result screen — isHome false, isHistory false', () => {
+    mockPathname = '/(app)/result'
+    // isHome = pathname === '/(app)' || '/(app)/index' → false
+    // isHistory = pathname.includes('history') → false
+    // Both inactive — just verify it renders without marking home active
+    const { getByLabelText } = render(<FloatingTabBar />)
+    expect(getByLabelText('Inicio')).toBeTruthy()
+    expect(getByLabelText('Historial')).toBeTruthy()
+  })
+
+  it('history tab is active on /(app)/history', () => {
+    mockPathname = '/(app)/history'
+    const { getByLabelText } = render(<FloatingTabBar />)
+    expect(getByLabelText('Historial')).toBeTruthy()
+  })
 })

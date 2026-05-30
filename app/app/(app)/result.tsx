@@ -1,12 +1,30 @@
-import { useState, useRef } from 'react'
-import { View, Text, FlatList, Dimensions, StyleSheet, Pressable } from 'react-native'
+import React, { useState, useRef, useEffect } from 'react'
+import { View, Text, FlatList, Dimensions, StyleSheet, Pressable, Image, ActivityIndicator } from 'react-native'
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { AudioPlayer } from '../../components/AudioPlayer'
+import { FloatingTabBar } from '../../components/FloatingTabBar'
 import { Colors, Fonts } from '../../constants/theme'
+import { supabase } from '../../lib/supabase'
+
+type ScanData = {
+  id: string
+  species: string
+  symmetry_index: string | number
+  fibonacci_alignment: string
+  narrative: string
+  audio_url: string | null
+  image_url: string | null
+  age_estimate: string
+  bark_type: string
+  branching_pattern: string
+  confidence: number
+  scanned_at: string
+  rag_sources?: string[]
+}
 
 type Chapter =
-  | { type: 'scan-lock'; species: string }
+  | { type: 'scan-lock'; scanData: ScanData }
   | { type: 'metrics'; symmetry: string; fibonacci: string }
   | { type: 'narrative'; narrative: string; audioUrl: string | null }
   | { type: 'rag'; sources: string[] }
@@ -14,37 +32,67 @@ type Chapter =
 export default function ResultScreen() {
   const router = useRouter()
   const [activeChapter, setActiveChapter] = useState(0)
+  const [scanData, setScanData] = useState<ScanData | null>(null)
+  const [loading, setLoading] = useState(true)
   const screenH = useRef(Dimensions?.get?.('window')?.height ?? 844).current
 
-  const { species, symmetry_index, fibonacci_alignment, narrative, audio_url, rag_sources } =
-    useLocalSearchParams<{
-      species: string
-      symmetry_index: string
-      fibonacci_alignment: string
-      narrative: string
-      audio_url: string
-      rag_sources?: string
-    }>()
+  const { scan_id } = useLocalSearchParams<{ scan_id: string }>()
 
-  const hasAudio = audio_url != null && audio_url !== 'null' && audio_url.length > 0
-  const ragList = rag_sources
-    ? rag_sources.split(',').map((s) => s.trim()).filter(Boolean)
+  useEffect(() => {
+    if (!scan_id) return
+    async function fetchScan() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch(
+          `${process.env.EXPO_PUBLIC_API_URL}/scan/${scan_id}`,
+          { headers: { Authorization: `Bearer ${session?.access_token}` } }
+        )
+        if (!res.ok) throw new Error('fetch failed')
+        const data: ScanData = await res.json()
+        setScanData(data)
+      } catch {
+        // keep scanData null — will show error state
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchScan()
+  }, [scan_id])
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator testID="activity-indicator" size="large" color={Colors.sistema} />
+      </View>
+    )
+  }
+
+  if (!scanData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>No se pudo cargar el escaneo.</Text>
+        <Pressable onPress={() => router.replace('/(app)')} style={styles.backLink}>
+          <Text style={styles.backLinkText}>← Inicio</Text>
+        </Pressable>
+      </View>
+    )
+  }
+
+  const ragList = Array.isArray(scanData.rag_sources)
+    ? scanData.rag_sources.filter(Boolean)
     : []
 
   const chapters: Chapter[] = [
-    {
-      type: 'scan-lock',
-      species: species ?? 'Especie desconocida',
-    },
+    { type: 'scan-lock', scanData },
     {
       type: 'metrics',
-      symmetry: symmetry_index ? Number(symmetry_index).toFixed(2) : '—',
-      fibonacci: fibonacci_alignment ?? '—',
+      symmetry: scanData.symmetry_index != null ? Number(scanData.symmetry_index).toFixed(2) : '—',
+      fibonacci: scanData.fibonacci_alignment ?? '—',
     },
     {
       type: 'narrative',
-      narrative: narrative ?? '',
-      audioUrl: hasAudio ? audio_url : null,
+      narrative: scanData.narrative ?? '',
+      audioUrl: scanData.audio_url ?? null,
     },
     ...(ragList.length > 0 ? [{ type: 'rag' as const, sources: ragList }] : []),
   ]
@@ -88,22 +136,63 @@ function renderChapter(
   chapter: Chapter,
   router: ReturnType<typeof useRouter>,
   screenH: number,
-): JSX.Element {
+): React.ReactElement {
   const chapterStyle = { height: screenH }
 
   switch (chapter.type) {
-    case 'scan-lock':
+    case 'scan-lock': {
+      const { scanData } = chapter
+      const confidencePct = Math.round((scanData.confidence ?? 0) * 100)
+      const badgeItems = [
+        scanData.age_estimate,
+        scanData.bark_type,
+        scanData.branching_pattern,
+      ].filter(Boolean)
+
       return (
         <View style={[styles.chapter, styles.chapterScanLock, chapterStyle]}>
+          {/* Confidence badge */}
+          <View style={styles.confidenceBadge}>
+            <Text style={styles.confidenceText}>{confidencePct}%</Text>
+          </View>
+
+          {/* Ring structure */}
           <View style={styles.scanRingOuter}>
             <View style={styles.scanRingMiddle}>
-              <View style={styles.scanRingInner} />
+              <View style={styles.scanRingInner}>
+                {scanData.image_url ? (
+                  <Image
+                    source={{ uri: scanData.image_url }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="cover"
+                    testID="tree-image"
+                  />
+                ) : (
+                  <Text style={styles.fallbackEmoji}>🌳</Text>
+                )}
+              </View>
             </View>
           </View>
-          <Text style={styles.speciesName}>{chapter.species}</Text>
+
+          {/* Species name */}
+          <Text style={styles.speciesName}>{scanData.species ?? 'Especie desconocida'}</Text>
+
+          {/* Trait badges */}
+          {badgeItems.length > 0 && (
+            <View style={styles.badgeRow}>
+              {badgeItems.map((badge) => (
+                <View key={badge} style={styles.traitBadge}>
+                  <Text style={styles.traitBadgeText}>{badge}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           <Text style={styles.swipeHint}>↓ desliza</Text>
+          <FloatingTabBar />
         </View>
       )
+    }
 
     case 'metrics':
       return (
@@ -120,6 +209,7 @@ function renderChapter(
             </View>
           </View>
           <Text style={styles.swipeHint}>↓ desliza</Text>
+          <FloatingTabBar />
         </View>
       )
 
@@ -133,13 +223,7 @@ function renderChapter(
               <AudioPlayer url={chapter.audioUrl} />
             </View>
           )}
-          <Pressable
-            style={({ pressed }) => [styles.newScanBtn, pressed && { opacity: 0.75 }]}
-            onPress={() => router.replace('/(app)/scan')}
-            accessibilityRole="button"
-          >
-            <Text style={styles.newScanText}>Nuevo escaneo</Text>
-          </Pressable>
+          <FloatingTabBar />
         </View>
       )
 
@@ -161,15 +245,37 @@ function renderChapter(
           >
             <Text style={styles.homeBtnText}>← Inicio</Text>
           </Pressable>
+          <FloatingTabBar />
         </View>
       )
   }
 }
 
-const RING = { outer: 160, middle: 120, inner: 80 }
+const RING = { outer: 200, middle: 156, inner: 112 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.void },
+
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.void,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  errorText: {
+    fontFamily: Fonts.body,
+    fontSize: 14,
+    color: Colors.texto,
+    opacity: 0.6,
+  },
+  backLink: { paddingVertical: 8 },
+  backLinkText: {
+    fontFamily: Fonts.body,
+    fontSize: 12,
+    color: Colors.sistema,
+    opacity: 0.5,
+  },
 
   // Spine
   spine: {
@@ -198,14 +304,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.void,
     paddingHorizontal: 28,
     paddingTop: 80,
-    paddingBottom: 48,
+    paddingBottom: 120,
     justifyContent: 'center',
-    gap: 24,
+    gap: 20,
   },
   chapterScanLock: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#000',
+    paddingBottom: 120,
   },
   chapterLabel: {
     fontFamily: Fonts.displayBold,
@@ -216,23 +323,37 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
+  // Confidence badge
+  confidenceBadge: {
+    backgroundColor: Colors.accion,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    marginBottom: 8,
+  },
+  confidenceText: {
+    fontFamily: Fonts.display,
+    fontSize: 13,
+    color: '#fff',
+    letterSpacing: 1,
+  },
+
   // Scan lock rings
   scanRingOuter: {
     width: RING.outer,
     height: RING.outer,
     borderRadius: RING.outer / 2,
     borderWidth: 1,
-    borderColor: 'rgba(0,255,136,0.3)',
+    borderColor: 'rgba(0,255,136,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 28,
   },
   scanRingMiddle: {
     width: RING.middle,
     height: RING.middle,
     borderRadius: RING.middle / 2,
     borderWidth: 1,
-    borderColor: 'rgba(0,255,136,0.45)',
+    borderColor: 'rgba(0,255,136,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -243,21 +364,52 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.sistema,
     backgroundColor: 'rgba(0,255,136,0.06)',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  fallbackEmoji: {
+    fontSize: 40,
+    textAlign: 'center',
+  },
+
   speciesName: {
     fontFamily: Fonts.serifItalic,
-    fontSize: 28,
+    fontSize: 26,
     color: Colors.sistema,
     textAlign: 'center',
-    lineHeight: 36,
+    lineHeight: 34,
   },
+
+  // Trait badges row
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  traitBadge: {
+    borderWidth: 1,
+    borderColor: Colors.sistemaBorder,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  traitBadgeText: {
+    fontFamily: Fonts.displayBold,
+    fontSize: 9,
+    color: Colors.sistema,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+
   swipeHint: {
     fontFamily: Fonts.bodyLight,
     fontSize: 11,
     color: Colors.texto,
     opacity: 0.3,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
 
   // Metrics grid
@@ -298,21 +450,6 @@ const styles = StyleSheet.create({
   },
   audioWrap: {
     marginTop: 4,
-  },
-  newScanBtn: {
-    borderWidth: 1,
-    borderColor: Colors.sistemaBorder,
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  newScanText: {
-    fontFamily: Fonts.displayBold,
-    fontSize: 12,
-    color: Colors.sistema,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
 
   // RAG sources

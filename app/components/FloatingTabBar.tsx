@@ -6,7 +6,7 @@ export function FloatingTabBar() {
   const router = useRouter()
   const pathname = usePathname()
 
-  const isHome = !pathname.includes('history')
+  const isHome = pathname === '/(app)' || pathname === '/(app)/index'
   const isHistory = pathname.includes('history')
 
   return (
