@@ -381,7 +381,6 @@ function Ch3Narrative({
 
 export default function ResultScreen() {
   const router = useRouter()
-  const [activeChapter, setActiveChapter] = useState(0)
   const [scanData, setScanData] = useState<ScanData | null>(null)
   const [loading, setLoading] = useState(true)
   const screenH = useRef(Dimensions?.get?.('window')?.height ?? 844).current
@@ -421,13 +420,15 @@ export default function ResultScreen() {
     opacity: bgSurfaceOpacity.value,
   }))
 
-  // --- Animation 1: Photo parallax (Ch1 inner ring) ---
+  // --- Animation 1: Photo parallax (Ch1 image only, bounded to ring) ---
+  const PARALLAX_MAX = 40  // pixels, bounded by ring overflow
+
   const photoParallaxY = useDerivedValue(() => {
     if (isReducedMotion) return 0
     return interpolate(
       clamp(scrollY.value / screenH, 0, 1),
       [0, 1],
-      [0, -screenH * 0.3]
+      [0, -PARALLAX_MAX]
     )
   }, [screenH])
 
@@ -502,10 +503,6 @@ export default function ResultScreen() {
       : []),
   ]
 
-  function handleChapterChange(index: number) {
-    if (index !== activeChapter) setActiveChapter(index)
-  }
-
   return (
     <View style={[styles.root, { backgroundColor: Colors.void }]}>
       {/* Animation 4: surface overlay fades in/out between chapters */}
@@ -530,7 +527,6 @@ export default function ResultScreen() {
               screenH,
               scrollY,
               index,
-              handleChapterChange,
               photoParallaxStyle
             )}
           </ChapterWrapper>
@@ -567,7 +563,6 @@ function renderChapter(
   screenH: number,
   scrollY: ReturnType<typeof useSharedValue<number>>,
   _index: number,
-  _onChapterChange: (i: number) => void,
   photoParallaxStyle?: ReturnType<typeof useAnimatedStyle>
 ): React.ReactElement {
   const chapterStyle = { height: screenH }
@@ -594,19 +589,21 @@ function renderChapter(
           {/* Ring structure */}
           <View style={styles.scanRingOuter}>
             <View style={styles.scanRingMiddle}>
-              {/* Animation 1: inner ring content moves at 30% parallax speed */}
-              <Animated.View style={[styles.scanRingInner, photoParallaxStyle]}>
+              {/* Animation 1: only the image shifts; ring border stays fixed */}
+              <View style={styles.scanRingInner}>
                 {scanData.image_url ? (
-                  <Image
-                    source={{ uri: scanData.image_url }}
-                    style={StyleSheet.absoluteFill}
-                    resizeMode="cover"
-                    testID="tree-image"
-                  />
+                  <Animated.View style={[StyleSheet.absoluteFill, photoParallaxStyle]}>
+                    <Image
+                      source={{ uri: scanData.image_url }}
+                      style={StyleSheet.absoluteFill}
+                      resizeMode="cover"
+                      testID="tree-image"
+                    />
+                  </Animated.View>
                 ) : (
                   <Text style={styles.fallbackEmoji}>🌳</Text>
                 )}
-              </Animated.View>
+              </View>
             </View>
           </View>
 

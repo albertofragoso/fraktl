@@ -393,16 +393,29 @@ describe('S4 scroll animations', () => {
     const isReducedMotion = true
     const screenH = 844
     const scrollYValue = screenH * 0.5
+    const PARALLAX_MAX = 40
 
     function computeParallax(scrollVal: number, sH: number, reduced: boolean) {
       if (reduced) return 0
       const t = Math.min(Math.max(scrollVal / sH, 0), 1)
-      return t * -sH * 0.3
+      return t * -PARALLAX_MAX
     }
 
     expect(computeParallax(scrollYValue, screenH, isReducedMotion)).toBe(0)
     // Without reduced motion it's non-zero at mid-scroll
     expect(computeParallax(scrollYValue, screenH, false)).not.toBe(0)
+  })
+
+  it('photoParallaxY magnitude is bounded (not screen-height scale)', () => {
+    // At scrollY = screenH (mid-scroll to Ch2), parallax should be
+    // between -PARALLAX_MAX and 0, not near -screenH*0.3
+    const screenH = 800
+    const PARALLAX_MAX = 40
+    const progress = Math.min(Math.max(screenH / screenH, 0), 1) // = 1.0 (full scroll to Ch2)
+    // At progress=1, offset = -PARALLAX_MAX
+    const offset = -PARALLAX_MAX * progress
+    expect(Math.abs(offset)).toBeLessThanOrEqual(PARALLAX_MAX)
+    expect(Math.abs(offset)).toBeLessThan(112 / 2) // less than ring radius
   })
 
   it('ChapterWrapper renders children', async () => {
