@@ -39,7 +39,10 @@ export default function ResultScreen() {
   const { scan_id } = useLocalSearchParams<{ scan_id: string }>()
 
   useEffect(() => {
-    if (!scan_id) return
+    if (!scan_id) {
+      setLoading(false)
+      return
+    }
     async function fetchScan() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -78,9 +81,8 @@ export default function ResultScreen() {
     )
   }
 
-  const ragList = Array.isArray(scanData.rag_sources)
-    ? scanData.rag_sources.filter(Boolean)
-    : []
+  // rag_sources not yet persisted server-side — Ch4 deferred to S5
+  const ragList: string[] = scanData?.rag_sources ?? []
 
   const chapters: Chapter[] = [
     { type: 'scan-lock', scanData },

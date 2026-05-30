@@ -47,7 +47,7 @@ describe('FloatingTabBar', () => {
   })
 
   it('home tab is active on /(app)', () => {
-    mockPathname = '/(app)'
+    mockPathname = '/'
     const { getByLabelText } = render(<FloatingTabBar />)
     // indicator dot should be active (accessible via parent pressable)
     expect(getByLabelText('Inicio')).toBeTruthy()
