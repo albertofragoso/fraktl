@@ -22,6 +22,8 @@ import Animated, {
   withRepeat,
   withSequence,
   cancelAnimation,
+  useReducedMotion,
+  SharedValue,
 } from 'react-native-reanimated'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { AudioPlayer } from '../../components/AudioPlayer'
@@ -67,6 +69,57 @@ const FIB_WIDTHS: Record<'alta' | 'media' | 'baja', number> = {
   alta: 0.85,
   media: 0.5,
   baja: 0.2,
+}
+
+// ---------------------------------------------------------------------------
+// Spine constants
+// ---------------------------------------------------------------------------
+
+const SPINE_DOT_HEIGHT = 6
+const SPINE_DOT_GAP = 10
+const SPINE_STEP = SPINE_DOT_HEIGHT + SPINE_DOT_GAP // 16px per chapter
+
+// ---------------------------------------------------------------------------
+// ChapterWrapper — exit fade + scale + entry scale
+// ---------------------------------------------------------------------------
+
+function ChapterWrapper({
+  index,
+  scrollY,
+  screenH,
+  isReducedMotion,
+  children,
+}: {
+  index: number
+  scrollY: SharedValue<number>
+  screenH: number
+  isReducedMotion: boolean
+  children: React.ReactNode
+}) {
+  const animatedStyle = useAnimatedStyle(() => {
+    if (isReducedMotion) return {}
+
+    const exitProgress = clamp((scrollY.value - screenH * index) / screenH, 0, 1)
+    const entryProgress = clamp(
+      (scrollY.value - screenH * (index - 1)) / screenH,
+      0,
+      1
+    )
+
+    const opacity = interpolate(exitProgress, [0, 0.3, 1], [1, 1, 0.3])
+    const exitScale = interpolate(exitProgress, [0, 0.3, 1], [1, 1, 0.96])
+    const entryScale =
+      index > 0 ? interpolate(entryProgress, [0, 1], [0.94, 1.0]) : 1
+    const scale = Math.min(exitScale, entryScale)
+
+    return { opacity, transform: [{ scale }] }
+  })
+
+  return (
+    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      {children}
+    </Animated.View>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -332,6 +385,7 @@ export default function ResultScreen() {
   const [scanData, setScanData] = useState<ScanData | null>(null)
   const [loading, setLoading] = useState(true)
   const screenH = useRef(Dimensions?.get?.('window')?.height ?? 844).current
+  const isReducedMotion = useReducedMotion()
 
   const { scan_id } = useLocalSearchParams<{ scan_id: string }>()
 
@@ -340,6 +394,46 @@ export default function ResultScreen() {
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y
   })
+
+  // --- Animation 3: Spine indicator fluid slide ---
+  const spineY = useDerivedValue(
+    () =>
+      interpolate(
+        scrollY.value / screenH,
+        [0, 1, 2, 3],
+        [0, SPINE_STEP, SPINE_STEP * 2, SPINE_STEP * 3]
+      ),
+    [screenH]
+  )
+  const spineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: spineY.value }],
+  }))
+
+  // --- Animation 4: Background color lerp (void ↔ surface sawtooth) ---
+  const bgSurfaceOpacity = useDerivedValue(() => {
+    if (isReducedMotion) return 0
+    const pos = scrollY.value / screenH
+    const mod = pos % 2
+    return clamp(mod <= 1 ? mod : 2 - mod, 0, 1)
+  }, [screenH])
+
+  const bgSurfaceStyle = useAnimatedStyle(() => ({
+    opacity: bgSurfaceOpacity.value,
+  }))
+
+  // --- Animation 1: Photo parallax (Ch1 inner ring) ---
+  const photoParallaxY = useDerivedValue(() => {
+    if (isReducedMotion) return 0
+    return interpolate(
+      clamp(scrollY.value / screenH, 0, 1),
+      [0, 1],
+      [0, -screenH * 0.3]
+    )
+  }, [screenH])
+
+  const photoParallaxStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: photoParallaxY.value }],
+  }))
 
   useEffect(() => {
     if (!scan_id) {
@@ -413,20 +507,34 @@ export default function ResultScreen() {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: Colors.void }]}>
+      {/* Animation 4: surface overlay fades in/out between chapters */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surface }, bgSurfaceStyle]}
+        pointerEvents="none"
+      />
+
       <Animated.FlatList
         data={chapters}
         keyExtractor={(_, i) => String(i)}
-        renderItem={({ item, index }) =>
-          renderChapter(
-            item,
-            router,
-            screenH,
-            scrollY,
-            index,
-            handleChapterChange
-          )
-        }
+        renderItem={({ item, index }) => (
+          <ChapterWrapper
+            index={index}
+            scrollY={scrollY}
+            screenH={screenH}
+            isReducedMotion={isReducedMotion}
+          >
+            {renderChapter(
+              item,
+              router,
+              screenH,
+              scrollY,
+              index,
+              handleChapterChange,
+              photoParallaxStyle
+            )}
+          </ChapterWrapper>
+        )}
         pagingEnabled
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
@@ -438,17 +546,12 @@ export default function ResultScreen() {
         })}
       />
 
-      {/* Spine indicator */}
+      {/* Animation 3: Spine indicator — fluid animated dot */}
       <View style={styles.spine} pointerEvents="none">
-        {chapters.map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.spineDot,
-              activeChapter === i && styles.spineDotActive,
-            ]}
-          />
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={styles.spineDot} />
         ))}
+        <Animated.View style={[styles.spineDotActive, styles.spineAbsolute, spineStyle]} />
       </View>
     </View>
   )
@@ -464,7 +567,8 @@ function renderChapter(
   screenH: number,
   scrollY: ReturnType<typeof useSharedValue<number>>,
   _index: number,
-  _onChapterChange: (i: number) => void
+  _onChapterChange: (i: number) => void,
+  photoParallaxStyle?: ReturnType<typeof useAnimatedStyle>
 ): React.ReactElement {
   const chapterStyle = { height: screenH }
 
@@ -490,7 +594,8 @@ function renderChapter(
           {/* Ring structure */}
           <View style={styles.scanRingOuter}>
             <View style={styles.scanRingMiddle}>
-              <View style={styles.scanRingInner}>
+              {/* Animation 1: inner ring content moves at 30% parallax speed */}
+              <Animated.View style={[styles.scanRingInner, photoParallaxStyle]}>
                 {scanData.image_url ? (
                   <Image
                     source={{ uri: scanData.image_url }}
@@ -501,7 +606,7 @@ function renderChapter(
                 ) : (
                   <Text style={styles.fallbackEmoji}>🌳</Text>
                 )}
-              </View>
+              </Animated.View>
             </View>
           </View>
 
@@ -612,23 +717,28 @@ const styles = StyleSheet.create({
   // Spine
   spine: {
     position: 'absolute',
-    right: 14,
+    right: 16,
     top: '50%',
-    transform: [{ translateY: -30 }],
-    gap: 6,
+    marginTop: -(SPINE_STEP * 1.5),
+    gap: SPINE_DOT_GAP,
     alignItems: 'center',
   },
   spineDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(0,255,136,0.2)',
+    width: 6,
+    height: SPINE_DOT_HEIGHT,
+    borderRadius: 3,
+    backgroundColor: 'rgba(245,234,208,0.2)',
   },
   spineDotActive: {
-    width: 4,
-    height: 12,
-    borderRadius: 2,
-    backgroundColor: Colors.accion,
+    width: 6,
+    height: SPINE_DOT_HEIGHT,
+    borderRadius: 3,
+    backgroundColor: Colors.sistema,
+  },
+  spineAbsolute: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
   },
 
   // Chapters — height injected as inline style

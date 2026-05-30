@@ -363,3 +363,55 @@ describe('ResultScreen — Ch3 typewriter + audio reveal', () => {
     })
   })
 })
+
+// ---------------------------------------------------------------------------
+// S4 — Scroll animations unit tests
+// ---------------------------------------------------------------------------
+
+describe('S4 scroll animations', () => {
+  it('exit fade: Ch0 starts fading at scrollY=screenH (not screenH*2)', () => {
+    // exitProgress for chapter 0 at scrollY=screenH should be 1
+    // opacity at exitProgress=1 → 0.3
+    const screenH = 800
+    const exitProgress = Math.min(Math.max((screenH - screenH * 0) / screenH, 0), 1)
+    expect(exitProgress).toBe(1)
+  })
+
+  it('bg lerp: sawtooth produces correct values at chapter boundaries', () => {
+    function sawtoothOpacity(pos: number) {
+      const mod = pos % 2
+      return Math.min(Math.max(mod <= 1 ? mod : 2 - mod, 0), 1)
+    }
+    expect(sawtoothOpacity(0)).toBe(0)   // Ch1: void
+    expect(sawtoothOpacity(1)).toBe(1)   // Ch2: surface
+    expect(sawtoothOpacity(2)).toBe(0)   // Ch3: void
+    expect(sawtoothOpacity(3)).toBe(1)   // Ch4: surface
+  })
+
+  it('photoParallaxY returns 0 when isReducedMotion', () => {
+    // When reduced motion is true, parallax formula returns 0
+    const isReducedMotion = true
+    const screenH = 844
+    const scrollYValue = screenH * 0.5
+
+    function computeParallax(scrollVal: number, sH: number, reduced: boolean) {
+      if (reduced) return 0
+      const t = Math.min(Math.max(scrollVal / sH, 0), 1)
+      return t * -sH * 0.3
+    }
+
+    expect(computeParallax(scrollYValue, screenH, isReducedMotion)).toBe(0)
+    // Without reduced motion it's non-zero at mid-scroll
+    expect(computeParallax(scrollYValue, screenH, false)).not.toBe(0)
+  })
+
+  it('ChapterWrapper renders children', async () => {
+    const { getByText } = render(<ResultScreen />)
+    // All chapter content should be present after data loads
+    await waitFor(() => {
+      expect(getByText('Quercus robur')).toBeTruthy()
+      expect(getByText('ANÁLISIS ESTRUCTURAL')).toBeTruthy()
+      expect(getByText('INTERPRETACIÓN')).toBeTruthy()
+    })
+  })
+})

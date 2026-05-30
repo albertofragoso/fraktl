@@ -90,6 +90,11 @@ const Animated = {
   createAnimatedComponent: (C) => C,
 }
 
+// useReducedMotion — returns false by default (full motion in tests)
+function useReducedMotion() {
+  return false
+}
+
 module.exports = {
   default: Animated,
   ...Animated,
@@ -98,6 +103,7 @@ module.exports = {
   useAnimatedStyle,
   useAnimatedReaction,
   useAnimatedScrollHandler,
+  useReducedMotion,
   useAnimatedProps: (fn) => { try { return fn() } catch { return {} } },
   useAnimatedRef: () => ({ current: null }),
   useAnimatedSensor: NOOP_FACTORY,
