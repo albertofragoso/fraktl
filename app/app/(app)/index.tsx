@@ -107,7 +107,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Iniciar escaneo"
           >
-            <Animated.View style={[styles.scanBtnGlow, { opacity: scanGlow }]} />
+            <Animated.View style={[styles.scanBtnGlow, { opacity: scanGlow.interpolate({ inputRange: [0.6, 1], outputRange: [0.04, 0.08] }) }]} />
             <Text style={styles.scanBtnText}>INICIAR ESCANEO</Text>
           </Pressable>
         </View>
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   logoText: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.brand,
     fontSize: 22,
     color: Colors.sistema,
     letterSpacing: 4,

@@ -9,7 +9,8 @@ import { FontList } from '../constants/theme'
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined)
+  // In dev, skip auth guard and start as null (not undefined) so render isn't blocked
+  const [session, setSession] = useState<Session | null | undefined>(__DEV__ ? null : undefined)
   const segments = useSegments()
   const router = useRouter()
 
@@ -29,6 +30,7 @@ export default function RootLayout() {
   }, [fontsLoaded])
 
   useEffect(() => {
+    if (__DEV__) return
     if (session === undefined) return
     const inAuth = segments[0] === '(auth)'
     if (!session && !inAuth) {

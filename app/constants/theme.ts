@@ -12,21 +12,22 @@ export const Colors = {
 }
 
 export const Fonts = {
-  display: 'Syne_800ExtraBold',
-  displayBold: 'Syne_700Bold',
-  serif: 'PlayfairDisplay_400Regular',
-  serifItalic: 'PlayfairDisplay_400Regular_Italic',
-  serifBold: 'PlayfairDisplay_700Bold',
-  body: 'SpaceGrotesk_400Regular',
-  bodyLight: 'SpaceGrotesk_300Light',
+  brand: 'BigShouldersDisplay_900Black',
+  display: 'IBMPlexMono_700Bold',
+  displayBold: 'IBMPlexMono_700Bold',
+  serif: 'Fraunces_400Regular',
+  serifItalic: 'Fraunces_400Regular_Italic',
+  serifBold: 'Fraunces_700Bold',
+  body: 'Outfit_400Regular',
+  bodyLight: 'Outfit_300Light',
 }
 
 export const FontList = {
-  Syne_800ExtraBold: require('@expo-google-fonts/syne').Syne_800ExtraBold,
-  Syne_700Bold: require('@expo-google-fonts/syne').Syne_700Bold,
-  PlayfairDisplay_400Regular: require('@expo-google-fonts/playfair-display').PlayfairDisplay_400Regular,
-  PlayfairDisplay_400Regular_Italic: require('@expo-google-fonts/playfair-display').PlayfairDisplay_400Regular_Italic,
-  PlayfairDisplay_700Bold: require('@expo-google-fonts/playfair-display').PlayfairDisplay_700Bold,
-  SpaceGrotesk_400Regular: require('@expo-google-fonts/space-grotesk').SpaceGrotesk_400Regular,
-  SpaceGrotesk_300Light: require('@expo-google-fonts/space-grotesk').SpaceGrotesk_300Light,
+  BigShouldersDisplay_900Black: require('@expo-google-fonts/big-shoulders-display').BigShouldersDisplay_900Black,
+  IBMPlexMono_700Bold: require('@expo-google-fonts/ibm-plex-mono').IBMPlexMono_700Bold,
+  Fraunces_400Regular: require('@expo-google-fonts/fraunces').Fraunces_400Regular,
+  Fraunces_400Regular_Italic: require('@expo-google-fonts/fraunces').Fraunces_400Regular_Italic,
+  Fraunces_700Bold: require('@expo-google-fonts/fraunces').Fraunces_700Bold,
+  Outfit_400Regular: require('@expo-google-fonts/outfit').Outfit_400Regular,
+  Outfit_300Light: require('@expo-google-fonts/outfit').Outfit_300Light,
 }
