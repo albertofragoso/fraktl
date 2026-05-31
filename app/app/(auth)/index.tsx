@@ -1,90 +1,158 @@
-import { useEffect, useRef, useState } from 'react'
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Animated,
-  ActivityIndicator,
-  Platform,
-} from 'react-native'
+import { useEffect, useState } from 'react'
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
+import { Video, ResizeMode } from 'expo-av'
+import { LinearGradient } from 'expo-linear-gradient'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withRepeat,
+  withDelay,
+  withSequence,
+  Easing,
+  cancelAnimation,
+  useReducedMotion,
+} from 'react-native-reanimated'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as WebBrowser from 'expo-web-browser'
 import * as AuthSession from 'expo-auth-session'
 import { supabase } from '../../lib/supabase'
 import { Colors, Fonts } from '../../constants/theme'
 
 WebBrowser.maybeCompleteAuthSession()
-
 const redirectUri = AuthSession.makeRedirectUri({ scheme: 'fraktl' })
 
-function FraktlSigil() {
-  const rotOuter = useRef(new Animated.Value(0)).current
-  const rotInner = useRef(new Animated.Value(0)).current
-  const pulse = useRef(new Animated.Value(0.6)).current
+// Download a dark forest video from Pexels/Coverr and place at: assets/auth-bg.mp4
+// Recommended search: "dark forest" "tree canopy night"
+const VIDEO_SOURCE = require('../../assets/auth-bg.mp4')
+
+function SonarRing({ delay }: { delay: number }) {
+  const scale = useSharedValue(1)
+  const opacity = useSharedValue(0)
+  const reducedMotion = useReducedMotion()
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(rotOuter, { toValue: 1, duration: 20000, useNativeDriver: true })
-    ).start()
-    Animated.loop(
-      Animated.timing(rotInner, { toValue: 1, duration: 12000, useNativeDriver: true })
-    ).start()
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 2000, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.5, duration: 2000, useNativeDriver: true }),
-      ])
-    ).start()
-  }, [])
+    if (reducedMotion) return
 
-  const spinOuter = rotOuter.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
-  const spinInner = rotInner.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] })
+    scale.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 0 }),
+          withTiming(5, { duration: 3000, easing: Easing.out(Easing.quad) }),
+        ),
+        -1,
+        false,
+      ),
+    )
+    opacity.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(0.7, { duration: 0 }),
+          withTiming(0, { duration: 3000 }),
+        ),
+        -1,
+        false,
+      ),
+    )
 
-  return (
-    <View style={styles.sigil}>
-      {/* Core glow */}
-      <Animated.View style={[styles.sigilGlow, { opacity: pulse }]} />
+    return () => {
+      cancelAnimation(scale)
+      cancelAnimation(opacity)
+    }
+  }, [reducedMotion])
 
-      {/* Outer ring */}
-      <Animated.View
-        style={[styles.sigilRingOuter, { transform: [{ rotate: spinOuter }] }]}
-      >
-        {/* Rotating dot on outer ring */}
-        <View style={styles.sigilDotOuter} />
-      </Animated.View>
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }))
 
-      {/* Inner ring */}
-      <Animated.View
-        style={[styles.sigilRingInner, { transform: [{ rotate: spinInner }] }]}
-      >
-        <View style={styles.sigilDotInner} />
-      </Animated.View>
-
-      {/* Tree trunk (center vertical) */}
-      <View style={styles.trunk} />
-      {/* Left branch */}
-      <View style={[styles.branch, styles.branchLeft]} />
-      {/* Right branch */}
-      <View style={[styles.branch, styles.branchRight]} />
-      {/* Node dot */}
-      <View style={styles.nodeCenter} />
-    </View>
-  )
+  return <Animated.View style={[styles.ring, ringStyle]} />
 }
 
 export default function AuthScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const scanY = useRef(new Animated.Value(0)).current
+  const insets = useSafeAreaInsets()
+  const reducedMotion = useReducedMotion()
+
+  // Entry values
+  const logoOpacity = useSharedValue(0)
+  const logoY = useSharedValue(-28)
+  const tagOpacity = useSharedValue(0)
+  const tagY = useSharedValue(10)
+  const ctaOpacity = useSharedValue(0)
+  const ctaY = useSharedValue(24)
+  const termsOpacity = useSharedValue(0)
+
+  // Scan line perpetual
+  const scanProgress = useSharedValue(0)
+
+  // Press spring
+  const pressScale = useSharedValue(1)
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanY, { toValue: 1, duration: 4000, useNativeDriver: false }),
-        Animated.timing(scanY, { toValue: 0, duration: 0, useNativeDriver: false }),
-      ])
-    ).start()
-  }, [])
+    const easeOut = Easing.out(Easing.cubic)
+    const easeQuad = Easing.out(Easing.quad)
+    const delay = reducedMotion ? 0 : 1
+
+    logoOpacity.value = withDelay(400 * delay, withTiming(1, { duration: 600, easing: easeOut }))
+    logoY.value = withDelay(400 * delay, withTiming(0, { duration: 600, easing: easeOut }))
+    tagOpacity.value = withDelay(700 * delay, withTiming(1, { duration: 500, easing: easeQuad }))
+    tagY.value = withDelay(700 * delay, withTiming(0, { duration: 500, easing: easeQuad }))
+    ctaOpacity.value = withDelay(1000 * delay, withTiming(1, { duration: 400 }))
+    ctaY.value = withDelay(1000 * delay, withSpring(0, { damping: 18, stiffness: 120 }))
+    termsOpacity.value = withDelay(1150 * delay, withTiming(0.28, { duration: 300 }))
+
+    if (!reducedMotion) {
+      scanProgress.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 1250, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1250, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+      )
+    }
+
+    return () => {
+      cancelAnimation(scanProgress)
+    }
+  }, [reducedMotion])
+
+  // Animated styles
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ translateY: logoY.value }],
+  }))
+
+  const tagStyle = useAnimatedStyle(() => ({
+    opacity: tagOpacity.value,
+    transform: [{ translateY: tagY.value }],
+  }))
+
+  const ctaStyle = useAnimatedStyle(() => ({
+    opacity: ctaOpacity.value,
+    transform: [{ translateY: ctaY.value }],
+  }))
+
+  const termsStyle = useAnimatedStyle(() => ({
+    opacity: termsOpacity.value,
+  }))
+
+  const scanLineStyle = useAnimatedStyle(() => ({
+    opacity: 0.5 + scanProgress.value * 0.5,
+    transform: [{ scaleX: 0.3 + scanProgress.value * 0.7 }],
+  }))
+
+  const scanBgStyle = useAnimatedStyle(() => ({
+    opacity: 0.6 + scanProgress.value * 0.4,
+  }))
+
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }))
 
   async function handleGoogleSignIn() {
     setLoading(true)
@@ -111,7 +179,7 @@ export default function AuthScreen() {
           })
         }
       }
-    } catch (e: any) {
+    } catch {
       setError('No se pudo conectar. Intenta de nuevo.')
     } finally {
       setLoading(false)
@@ -120,43 +188,94 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Subtle scan line */}
-      <Animated.View
-        style={[
-          styles.scanLine,
-          {
-            top: scanY.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['0%', '100%'],
-            }),
-          },
-        ]}
+      {/* Background video — replace assets/auth-bg.mp4 with a dark forest clip from Pexels/Coverr */}
+      <Video
+        source={VIDEO_SOURCE}
+        style={StyleSheet.absoluteFillObject}
+        resizeMode={ResizeMode.COVER}
+        isLooping
+        isMuted
+        shouldPlay
+        onError={() => {}}
       />
 
-      <FraktlSigil />
+      {/* Gradient overlay — top boosted to 0.50 for text legibility over bright video frames */}
+      <LinearGradient
+        colors={['rgba(8,16,10,0.50)', 'rgba(8,16,10,0.68)', '#08100a']}
+        locations={[0, 0.55, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
 
-      <Text style={styles.title}>FRAKTL</Text>
-      <Text style={styles.subtitle}>// BIOSEMIOTIC TREE SCANNER</Text>
+      {/* Sonar rings — pointer-events none */}
+      <View style={styles.ringsWrapper} pointerEvents="none">
+        <SonarRing delay={0} />
+        <SonarRing delay={1000} />
+        <SonarRing delay={2000} />
+        <View style={styles.ringDot} />
+      </View>
 
-      {error != null && <Text style={styles.errorText}>{error}</Text>}
+      <View style={[styles.content, { paddingTop: insets.top + 20 }]}>
 
-      <Pressable
-        style={({ pressed }) => [styles.googleBtn, pressed && styles.googleBtnPressed]}
-        onPress={handleGoogleSignIn}
-        disabled={loading}
-        accessibilityRole="button"
-        accessibilityLabel="Iniciar sesión con Google"
-      >
-        {loading ? (
-          <ActivityIndicator color={Colors.neon} size="small" />
-        ) : (
-          <Text style={styles.googleBtnText}>INICIAR CON GOOGLE</Text>
-        )}
-      </Pressable>
+        {/* Logo + tagline */}
+        <View style={styles.logoSection}>
+          <Animated.View style={logoStyle}>
+            <Text style={styles.logo}>fraktl</Text>
+          </Animated.View>
+          <Animated.View style={tagStyle}>
+            <Text style={styles.tagline}>
+              {'Cada árbol es un texto.\nAprende a leerlos.'}
+            </Text>
+          </Animated.View>
+        </View>
 
-      <Text style={styles.footer}>
-        {'SYS_AUTH_PROTOCOL v2.1\nBIOMETRIC_LINK: PENDING\nTREE_DB: 9 SPECIES LOADED'}
-      </Text>
+        {/* CTA */}
+        <Animated.View style={[styles.ctaSection, ctaStyle]}>
+          {error != null && <Text style={styles.errorText}>{error}</Text>}
+
+          <Animated.View style={pressStyle}>
+            <Pressable
+              onPressIn={() => {
+                pressScale.value = withSpring(0.97, { damping: 20, stiffness: 200 })
+              }}
+              onPressOut={() => {
+                pressScale.value = withSpring(1, { damping: 20, stiffness: 200 })
+              }}
+              onPress={handleGoogleSignIn}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Continuar con Google"
+            >
+              {/* Scan burst container */}
+              <View style={styles.scanBtn}>
+                <Animated.View style={[styles.scanLine, scanLineStyle]}>
+                  <LinearGradient
+                    colors={['transparent', Colors.accion, Colors.suave, Colors.accion, 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                </Animated.View>
+                <Animated.View style={[styles.scanBg, scanBgStyle]}>
+                  <LinearGradient
+                    colors={['rgba(255,107,0,0.10)', 'rgba(255,107,0,0.04)']}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                </Animated.View>
+                <View style={styles.scanLineBottom} />
+                {loading
+                  ? <ActivityIndicator color={Colors.accion} size="small" style={styles.loader} />
+                  : <Text style={styles.scanBtnText}>Continuar con Google</Text>
+                }
+              </View>
+            </Pressable>
+          </Animated.View>
+
+          <Animated.Text style={[styles.terms, termsStyle]}>
+            Al continuar aceptas los Términos de Uso
+          </Animated.Text>
+        </Animated.View>
+
+      </View>
     </View>
   )
 }
@@ -165,163 +284,118 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.void,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    overflow: 'hidden',
   },
-  scanLine: {
+  ringsWrapper: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: Colors.neon,
-    opacity: 0.05,
+    top: '25%',
+    left: '50%',
+    width: 0,
+    height: 0,
   },
-  // Sigil
-  sigil: {
-    width: 100,
-    height: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
-  sigilGlow: {
+  ring: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.neon,
-    opacity: 0.08,
-  },
-  sigilRingOuter: {
-    position: 'absolute',
-    width: 92,
-    height: 92,
-    borderRadius: 46,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     borderWidth: 1,
-    borderColor: Colors.neon,
-    borderStyle: 'dashed',
-    opacity: 0.45,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    borderColor: 'rgba(0,255,136,0.6)',
+    marginLeft: -26,
+    marginTop: -26,
   },
-  sigilDotOuter: {
+  ringDot: {
+    position: 'absolute',
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: Colors.neon,
-    opacity: 0.8,
+    backgroundColor: Colors.sistema,
+    marginLeft: -2.5,
     marginTop: -2.5,
+    shadowColor: Colors.sistema,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 6,
+    shadowOpacity: 1,
+    elevation: 4,
   },
-  sigilRingInner: {
-    position: 'absolute',
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 0.5,
-    borderColor: Colors.cyan,
-    borderStyle: 'dashed',
-    opacity: 0.35,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+  content: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingBottom: 44,
+    justifyContent: 'space-between',
   },
-  sigilDotInner: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.cyan,
-    opacity: 0.7,
-    marginTop: -2,
+  logoSection: {
+    gap: 12,
   },
-  trunk: {
-    position: 'absolute',
-    width: 1.5,
-    height: 44,
-    backgroundColor: Colors.neon,
-    opacity: 0.9,
-    top: 28,
+  logo: {
+    fontFamily: Fonts.brand,
+    fontSize: 46,
+    color: Colors.sistema,
+    letterSpacing: 3,
+    lineHeight: 52,
+    textShadowColor: 'rgba(8,16,10,0.75)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
-  branch: {
-    position: 'absolute',
-    width: 24,
-    height: 1,
-    backgroundColor: Colors.neon,
-    opacity: 0.6,
-    top: 46,
+  tagline: {
+    fontFamily: Fonts.serifItalic,
+    fontSize: 13,
+    color: Colors.texto,
+    opacity: 0.85,
+    lineHeight: 21,
+    textShadowColor: 'rgba(8,16,10,0.95)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
-  branchLeft: {
-    right: '50%',
-    marginRight: -1,
-    transform: [{ rotate: '-30deg' }],
-  },
-  branchRight: {
-    left: '50%',
-    marginLeft: -1,
-    transform: [{ rotate: '30deg' }],
-  },
-  nodeCenter: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.neon,
-    top: 47,
-  },
-  // Text
-  title: {
-    fontFamily: Fonts.display,
-    fontSize: 38,
-    color: Colors.white,
-    letterSpacing: 6,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontFamily: Fonts.body,
-    fontSize: 10,
-    color: Colors.neon,
-    letterSpacing: 2,
-    opacity: 0.5,
-    marginBottom: 52,
+  ctaSection: {
+    gap: 10,
   },
   errorText: {
     fontFamily: Fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: '#ff5555',
-    marginBottom: 16,
     textAlign: 'center',
   },
-  // Button
-  googleBtn: {
-    width: '100%',
+  scanBtn: {
+    overflow: 'hidden',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderWidth: 1,
-    borderColor: Colors.borderNeon,
-    backgroundColor: Colors.ghost,
-    borderRadius: 2,
-    minHeight: 52,
+    minHeight: 44,
   },
-  googleBtnPressed: {
-    backgroundColor: 'rgba(0,255,136,0.15)',
-    borderColor: Colors.neon,
+  scanLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    overflow: 'hidden',
   },
-  googleBtnText: {
-    fontFamily: Fonts.displayBold,
-    fontSize: 12,
-    color: Colors.neon,
-    letterSpacing: 3,
+  scanBg: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
   },
-  footer: {
-    fontFamily: Fonts.body,
-    fontSize: 9,
-    color: Colors.neon,
-    opacity: 0.22,
-    letterSpacing: 1,
+  scanLineBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255,107,0,0.30)',
+  },
+  scanBtnText: {
+    fontFamily: Fonts.brand,
+    fontSize: 13,
+    letterSpacing: 3.5,
+    color: Colors.accion,
+  },
+  loader: {
+    paddingVertical: 2,
+  },
+  terms: {
+    fontFamily: Fonts.bodyLight,
+    fontSize: 8,
+    color: Colors.texto,
     textAlign: 'center',
-    lineHeight: 16,
-    marginTop: 40,
+    letterSpacing: 0.5,
   },
 })

@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-05-29",
+  "screen": "AuthScreen — app/(auth)/index.tsx",
+  "engine": "react-native-reanimated@4.1.7",
+  "already_animated": [
+    {
+      "element": "logo (Animated.View)",
+      "shared_values": ["logoOpacity", "logoY"],
+      "properties": ["opacity", "transform.translateY"],
+      "type": "entry",
+      "spec": "withDelay(400ms) withTiming(600ms, Easing.out(Easing.cubic))"
+    },
+    {
+      "element": "tagline (Animated.View)",
+      "shared_values": ["tagOpacity", "tagY"],
+      "properties": ["opacity", "transform.translateY"],
+      "type": "entry",
+      "spec": "withDelay(700ms) withTiming(500ms, Easing.out(Easing.quad))"
+    },
+    {
+      "element": "ctaSection (Animated.View)",
+      "shared_values": ["ctaOpacity", "ctaY"],
+      "properties": ["opacity", "transform.translateY"],
+      "type": "entry",
+      "spec": "withDelay(1000ms) withSpring(damping:18, stiffness:120) + withTiming(400ms)"
+    },
+    {
+      "element": "terms (Animated.Text)",
+      "shared_values": ["termsOpacity"],
+      "properties": ["opacity"],
+      "type": "entry",
+      "spec": "withDelay(1150ms) withTiming(300ms) → 0.28"
+    },
+    {
+      "element": "SonarRing x3 (Animated.View)",
+      "shared_values": ["scale", "opacity"],
+      "properties": ["transform.scale", "opacity"],
+      "type": "perpetual",
+      "spec": "withRepeat(withSequence(reset→withTiming(5, 3000ms, easeOutQuad)), -1) stagger: [0ms, 1000ms, 2000ms]"
+    },
+    {
+      "element": "scanLine (Animated.View)",
+      "shared_values": ["scanProgress"],
+      "properties": ["opacity", "transform.scaleX"],
+      "type": "perpetual",
+      "spec": "withRepeat(withSequence(withTiming(1,1250ms,sinInOut), withTiming(0,1250ms,sinInOut)), -1)"
+    },
+    {
+      "element": "scanBg (Animated.View)",
+      "shared_values": ["scanProgress"],
+      "properties": ["opacity"],
+      "type": "perpetual",
+      "spec": "opacity: 0.6 + scanProgress * 0.4"
+    },
+    {
+      "element": "pressable wrapper (Animated.View)",
+      "shared_values": ["pressScale"],
+      "properties": ["transform.scale"],
+      "type": "interaction",
+      "spec": "withSpring(0.97, damping:20, stiffness:200) on press / withSpring(1) on release"
+    }
+  ],
+  "available_for_scroll": [],
+  "scroll_contract": "none",
+  "reduced_motion_guard": "useReducedMotion() — perpetuals skipped, entry plays at 0 delay",
+  "cleanup": "cancelAnimation called in useEffect return for scanProgress, scale, opacity per SonarRing"
+}

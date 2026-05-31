@@ -20,7 +20,26 @@ async def identify_tree(image_bytes: bytes) -> StepResult[dict]:
                     {"type": "text", "text": IDENTIFY_PROMPT},
                 ],
             }],
-            response_format={"type": "json_object"},
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "tree_identification",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "species": {"type": "string"},
+                            "age_estimate": {"type": "string"},
+                            "bark_type": {"type": "string"},
+                            "branching_pattern": {"type": "string"},
+                            "confidence": {"type": "number"},
+                        },
+                        "required": ["species", "age_estimate", "bark_type",
+                                     "branching_pattern", "confidence"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
             max_tokens=300,
         )
         data = json.loads(response.choices[0].message.content)

@@ -120,15 +120,15 @@ export function AudioPlayer({ url }: Props) {
 const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
-    borderColor: Colors.borderCyan,
-    backgroundColor: Colors.ghostCyan,
+    borderColor: Colors.accionBorder,
+    backgroundColor: Colors.accionDim,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
   },
   containerPressed: {
-    backgroundColor: 'rgba(0,229,229,0.12)',
+    backgroundColor: Colors.accionDim,
   },
   waveform: {
     flexDirection: 'row',
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: 3,
-    backgroundColor: Colors.cyan,
+    backgroundColor: Colors.suave,
     borderRadius: 2,
   },
   labelGroup: {
@@ -149,24 +149,24 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 16,
-    color: Colors.cyan,
+    color: Colors.suave,
   },
   label: {
     fontFamily: Fonts.body,
     fontSize: 10,
-    color: Colors.cyan,
+    color: Colors.suave,
     letterSpacing: 2,
   },
   errorContainer: {
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.borderNeon,
+    borderColor: Colors.sistemaBorder,
     alignItems: 'center',
   },
   errorText: {
     fontFamily: Fonts.body,
     fontSize: 10,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.3,
     letterSpacing: 2,
   },

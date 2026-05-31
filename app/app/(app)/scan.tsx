@@ -49,7 +49,7 @@ export default function ScanScreen() {
 
       if (!res.ok) throw new Error('scan failed')
       const result = await res.json()
-      router.push({ pathname: '/(app)/result', params: result })
+      router.push({ pathname: '/(app)/result', params: { scan_id: result.scan_id } })
     } catch {
       Alert.alert('Error', 'No se pudo analizar el árbol. Intenta de nuevo.')
       setLoading(false)
@@ -76,7 +76,7 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.permissionScreen}>
-        <Text style={styles.permissionTitle}>ACCESO A CÁMARA</Text>
+        <Text style={styles.permissionTitle}>Acceso a cámara</Text>
         <Text style={styles.permissionDesc}>
           Fraktl necesita la cámara para escanear el árbol.
         </Text>
@@ -99,12 +99,12 @@ export default function ScanScreen() {
 
       {loading ? (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors.neon} />
+          <ActivityIndicator size="large" color={Colors.sistema} />
           <Text style={styles.loadingTitle}>ANALIZANDO</Text>
           <Text style={styles.loadingDesc}>Consultando el árbol...</Text>
         </View>
       ) : (
-        <ScanOverlay hint={hint} />
+        <ScanOverlay hint={hint} state={loading ? 'detected' : 'scanning'} />
       )}
 
       {/* Back button */}
@@ -137,16 +137,17 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   permissionTitle: {
-    fontFamily: Fonts.display,
-    fontSize: 18,
-    color: Colors.neon,
-    letterSpacing: 4,
+    fontFamily: Fonts.serifBold,
+    fontSize: 22,
+    color: Colors.texto,
+    letterSpacing: 0,
     marginBottom: 4,
+    textAlign: 'center',
   },
   permissionDesc: {
     fontFamily: Fonts.body,
     fontSize: 13,
-    color: Colors.white,
+    color: Colors.texto,
     opacity: 0.5,
     textAlign: 'center',
     lineHeight: 20,
@@ -156,8 +157,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderWidth: 1,
-    borderColor: Colors.neon,
-    backgroundColor: Colors.ghost,
+    borderColor: Colors.sistema,
+    backgroundColor: Colors.sistemaDim,
   },
   permissionBtnPressed: {
     backgroundColor: 'rgba(0,255,136,0.18)',
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   permissionBtnText: {
     fontFamily: Fonts.display,
     fontSize: 12,
-    color: Colors.neon,
+    color: Colors.sistema,
     letterSpacing: 3,
   },
   backLink: {
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
   backLinkText: {
     fontFamily: Fonts.body,
     fontSize: 12,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.4,
   },
 
@@ -189,14 +190,14 @@ const styles = StyleSheet.create({
   loadingTitle: {
     fontFamily: Fonts.display,
     fontSize: 16,
-    color: Colors.neon,
+    color: Colors.sistema,
     letterSpacing: 4,
     marginTop: 8,
   },
   loadingDesc: {
     fontFamily: Fonts.body,
     fontSize: 12,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.45,
     letterSpacing: 1,
   },
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderWidth: 1,
-    borderColor: Colors.borderNeon,
+    borderColor: Colors.sistemaBorder,
     backgroundColor: 'rgba(1,8,8,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
   backBtnText: {
     fontFamily: Fonts.body,
     fontSize: 14,
-    color: Colors.neon,
+    color: Colors.sistema,
     opacity: 0.7,
   },
 })
